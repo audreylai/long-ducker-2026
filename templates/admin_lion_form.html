@@ -13,9 +13,8 @@
         {{ form.hidden_tag() }}
         <div>
             <label class="block text-sm font-semibold text-harrowBlue">{{ form.name.label }}
-                {{ form.name(id="lion-name", class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none", placeholder="Eg. Midnight Voyager") }}
+                {{ form.name(id="lion-name", class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none") }}
             </label>
-            <p class="mt-1 text-xs text-slate-500">Slug preview: <span id="lion-slug-preview" data-fallback="auto-generated on save">{{ lion.slug if lion and lion.slug else 'auto-generated on save' }}</span></p>
             {% for error in form.name.errors %}
                 <p class="mt-1 text-xs text-red-600">{{ error }}</p>
             {% endfor %}
@@ -23,7 +22,7 @@
         <div class="grid gap-5 sm:grid-cols-2">
             <div>
                 <label class="block text-sm font-semibold text-harrowBlue">{{ form.house.label }}
-                    {{ form.house(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none", placeholder="Gellhorn") }}
+                    {{ form.house(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none") }}
                 </label>
                 {% for error in form.house.errors %}
                     <p class="mt-1 text-xs text-red-600">{{ error }}</p>
@@ -31,7 +30,7 @@
             </div>
             <div>
                 <label class="block text-sm font-semibold text-harrowBlue">{{ form.current_bid.label }}
-                    {{ form.current_bid(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none", placeholder="1000") }}
+                    {{ form.current_bid(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none") }}
                 </label>
                 {% for error in form.current_bid.errors %}
                     <p class="mt-1 text-xs text-red-600">{{ error }}</p>
@@ -67,7 +66,7 @@
         <div>
             <label class="block text-sm font-semibold text-harrowBlue">{{ form.images.label }}</label>
             <div id="lion-dropzone" class="relative mt-2 rounded-3xl border-2 border-dashed border-harrowBlue/30 bg-harrowSand/30 px-6 py-8 text-center transition">
-                {{ form.images(id="lion-images", class="absolute inset-0 h-full w-full cursor-pointer opacity-0", multiple=True) }}
+                {{ form.images(id="lion-images", class="absolute inset-0 h-full w-full cursor-pointer opacity-0", multiple=True, accept="image/jpeg,image/png,image/gif,image/webp") }}
                 <div class="pointer-events-none space-y-1">
                     <p class="text-sm font-semibold text-harrowBlue">Drag & drop files</p>
                     <p class="text-xs text-slate-500">or click to browse. Accepts JPG, PNG, GIF, WEBP.</p>
@@ -127,23 +126,6 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const nameInput = document.getElementById('lion-name');
-    const slugPreview = document.getElementById('lion-slug-preview');
-    const slugFallback = slugPreview ? (slugPreview.dataset.fallback || 'auto-generated on save') : '';
-    const slugify = (value) => value
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-
-    if (nameInput && slugPreview) {
-        const updateSlugPreview = () => {
-            const next = slugify(nameInput.value);
-            slugPreview.textContent = next || slugFallback;
-        };
-        nameInput.addEventListener('input', updateSlugPreview);
-    }
-
     const input = document.getElementById('lion-images');
     const zone = document.getElementById('lion-dropzone');
     const list = document.getElementById('lion-dropzone-list');
@@ -151,17 +133,116 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const updateList = (files) => {
-        if (!files || files.length === 0) {
+    let dt = null;
+    let supportsDataTransfer = false;
+    try {
+        dt = new DataTransfer();
+        supportsDataTransfer = !!dt.items;
+    } catch (error) {
+        supportsDataTransfer = false;
+    }
+
+    const allowedTypes = new Set([
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+    ]);
+
+    const isAllowedType = (file) => allowedTypes.has(file.type);
+
+    const renderPreviewList = (files, allowRemove) => {
+        if (!files.length) {
             list.classList.add('hidden');
             list.innerHTML = '';
             return;
         }
+
         list.classList.remove('hidden');
-        list.innerHTML = Array.from(files).map((file) => `<li>${file.name}</li>`).join('');
+        list.innerHTML = files.map((file, index) => {
+            const imageUrl = URL.createObjectURL(file);
+            return `
+                <li class="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 px-4 py-3 bg-white/70">
+                    <div class="flex items-center gap-3">
+                        <img src="${imageUrl}" alt="${file.name}" class="h-12 w-12 rounded-xl object-cover border border-slate-200" />
+                        <div>
+                            <p class="text-sm font-semibold text-harrowBlue">${file.name}</p>
+                            <p class="text-xs text-slate-500">${Math.round(file.size / 1024)} KB</p>
+                        </div>
+                    </div>
+                    ${allowRemove
+                        ? `<button type="button" class="text-xs font-semibold text-red-600" data-remove-index="${index}">Remove</button>`
+                        : `<button type="button" class="text-xs font-semibold text-slate-400 cursor-not-allowed" disabled>Remove</button>`}
+                </li>
+            `;
+        }).join('');
+
+        if (!allowRemove) {
+            list.insertAdjacentHTML(
+                'beforeend',
+                `<li class="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 px-4 py-3 bg-white/70">
+                    <p class="text-xs text-slate-500">Your browser doesn’t support removing individual files.</p>
+                    <button type="button" id="lion-clear-files" class="text-xs font-semibold text-red-600">Clear selection</button>
+                </li>`
+            );
+        }
     };
 
-    input.addEventListener('change', () => updateList(input.files));
+    const syncInputFiles = () => {
+        if (!supportsDataTransfer) {
+            renderPreviewList(Array.from(input.files || []), false);
+            return;
+        }
+        input.files = dt.files;
+        renderPreviewList(Array.from(dt.files), true);
+    };
+
+    const addFiles = (files) => {
+        const incoming = Array.from(files || []);
+        const invalidFiles = incoming.filter((file) => !isAllowedType(file));
+        const validFiles = incoming.filter((file) => isAllowedType(file));
+        if (invalidFiles.length) {
+            alert('Only JPG, PNG, GIF, or WEBP files are supported.');
+        }
+        if (!supportsDataTransfer) {
+            renderPreviewList(validFiles, false);
+            return;
+        }
+        validFiles.forEach((file) => dt.items.add(file));
+        syncInputFiles();
+    };
+
+    const removeFileAt = (index) => {
+        if (!supportsDataTransfer) {
+            return;
+        }
+        dt.items.remove(index);
+        syncInputFiles();
+    };
+
+    input.addEventListener('change', () => addFiles(input.files));
+
+    list.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+        const removeIndex = target.getAttribute('data-remove-index');
+        if (removeIndex !== null) {
+            const index = Number(removeIndex);
+            if (!Number.isNaN(index)) {
+                removeFileAt(index);
+            }
+            return;
+        }
+        if (target.id === 'lion-clear-files') {
+            input.value = '';
+            if (supportsDataTransfer && dt) {
+                dt.items.clear();
+            }
+            renderPreviewList([], supportsDataTransfer);
+        }
+    });
 
     ['dragenter', 'dragover'].forEach((eventName) => {
         zone.addEventListener(eventName, (event) => {
@@ -176,14 +257,10 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             event.stopPropagation();
             if (eventName === 'drop') {
-                let files = event.dataTransfer.files;
-                if (typeof DataTransfer !== 'undefined') {
-                    const dt = new DataTransfer();
-                    Array.from(files).forEach((file) => dt.items.add(file));
-                    input.files = dt.files;
-                    files = input.files;
+                const files = event.dataTransfer.files;
+                if (files && files.length) {
+                    addFiles(files);
                 }
-                updateList(files);
             }
             zone.classList.remove('ring-2', 'ring-harrowBlue/40');
         });

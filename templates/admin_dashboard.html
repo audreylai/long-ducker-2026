@@ -20,25 +20,30 @@
 
     <div class="grid gap-4 md:grid-cols-4">
         <article class="bg-white rounded-3xl p-4 shadow-sm border border-white/60">
-            <p class="text-xs uppercase tracking-wide text-slate-500">Registered lions</p>
+            <p class="text-xs uppercase tracking-wide text-slate-500">Total lions</p>
             <p class="text-3xl font-serif text-harrowBlue">{{ metrics.total_lions }}</p>
         </article>
+		<article class="bg-white rounded-3xl p-4 shadow-sm border border-white/60">
+            <p class="text-xs uppercase tracking-wide text-slate-500">Highest bid</p>
+            <p class="text-3xl font-serif text-harrowBlue">${{ '{:,.0f}'.format(metrics.highest_bid) }}</p>
+        </article>
         <article class="bg-white rounded-3xl p-4 shadow-sm border border-white/60">
-            <p class="text-xs uppercase tracking-wide text-slate-500">Bids logged</p>
+            <p class="text-xs uppercase tracking-wide text-slate-500">Total bids</p>
             <p class="text-3xl font-serif text-harrowBlue">{{ metrics.total_bids }}</p>
         </article>
         <article class="bg-white rounded-3xl p-4 shadow-sm border border-white/60">
             <p class="text-xs uppercase tracking-wide text-slate-500">Unique bidders</p>
             <p class="text-3xl font-serif text-harrowBlue">{{ metrics.unique_bidders }}</p>
         </article>
-        <article class="bg-white rounded-3xl p-4 shadow-sm border border-white/60">
-            <p class="text-xs uppercase tracking-wide text-slate-500">Top amount</p>
-            <p class="text-3xl font-serif text-harrowBlue">${{ '{:,.0f}'.format(metrics.highest_bid) }}</p>
-        </article>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-2">
-        <section class="bg-white rounded-3xl p-6 shadow-sm border border-white/60">
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Admin sections">
+        <button type="button" data-admin-tab="lions" class="rounded-full px-4 py-2 text-sm font-semibold border border-harrowBlue/20 text-harrowBlue bg-white">Manage lions</button>
+        <button type="button" data-admin-tab="bids" class="rounded-full px-4 py-2 text-sm font-semibold border border-harrowBlue/20 text-harrowBlue bg-white/60">View Bids</button>
+    </div>
+
+    <div class="space-y-6">
+        <section class="bg-white rounded-3xl p-6 shadow-sm border border-white/60" data-admin-panel="lions">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs uppercase tracking-wide text-harrowBlue/60">Lion management</p>
@@ -46,16 +51,32 @@
                 </div>
                 <a href="{{ url_for('admin_create_lion') }}" class="text-sm font-semibold text-harrowBlue">+ Add lion</a>
             </div>
-            <div class="mt-4 space-y-4">
+            <div class="mt-4">
                 {% if lions %}
+                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {% for lion in lions %}
-                    <article class="p-4 rounded-2xl border border-slate-100 flex flex-wrap gap-4 items-center justify-between">
-                        <div>
-                            <p class="text-xs uppercase tracking-wide text-slate-500">House {{ lion.house or '—' }}</p>
-                            <p class="text-lg font-semibold text-harrowBlue">{{ lion.name }}</p>
-                            <p class="text-xs text-slate-500">{{ lion.image_count }} asset{{ '' if lion.image_count == 1 else 's' }}</p>
+                    <article class="p-4 rounded-2xl border border-slate-100 flex flex-col gap-4">
+                        <div class="flex items-center gap-4 min-w-0">
+                            <img src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=600&q=80' }}" alt="{{ lion.name }}" class="h-16 w-16 rounded-2xl object-cover border border-slate-100" />
+                            <div class="min-w-0 space-y-1">
+                                <p class="text-xs uppercase tracking-wide text-slate-500">House {{ lion.house or '—' }}</p>
+                                <p class="text-lg font-semibold text-harrowBlue">{{ lion.name }}</p>
+                                <p class="text-xs text-slate-500">{{ lion.image_count }} asset{{ '' if lion.image_count == 1 else 's' }}</p>
+                                <div class="flex flex-wrap items-center gap-2 text-xs">
+                                    {% if lion.bidding_open %}
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 font-semibold bg-emerald-50 text-emerald-700">Live</span>
+                                    {% elif lion.bidding_starts_at and current_time < lion.bidding_starts_at %}
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 font-semibold bg-amber-50 text-amber-700">Upcoming</span>
+                                    {% else %}
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 font-semibold bg-slate-100 text-slate-500">Closed</span>
+                                    {% endif %}
+                                    {% if lion.bidding_starts_at_hkt and lion.bidding_ends_at_hkt %}
+                                        <span class="text-slate-500">{{ lion.bidding_starts_at_hkt.strftime('%d %b %H:%M') }} – {{ lion.bidding_ends_at_hkt.strftime('%d %b %H:%M') }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
-                        <div class="text-sm text-right">
+                        <div class="text-sm">
                             <p class="text-slate-500">Updated</p>
                             <p class="font-semibold text-harrowBlue">
                                 {% if lion.updated_at %}
@@ -71,36 +92,77 @@
                         </div>
                     </article>
                     {% endfor %}
+                    </div>
                 {% else %}
                     <p class="text-sm text-slate-500">No lions have been added yet.</p>
                 {% endif %}
             </div>
         </section>
 
-        <section class="bg-white rounded-3xl p-6 shadow-sm border border-white/60">
+        <section class="bg-white rounded-3xl p-6 shadow-sm border border-white/60 hidden" data-admin-panel="bids">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs uppercase tracking-wide text-harrowBlue/60">Live bids</p>
-                    <h3 class="text-xl font-serif text-harrowBlue">Queue</h3>
+                    <p class="text-xs uppercase tracking-wide text-harrowBlue/60">Bid management</p>
+                    <h3 class="text-xl font-serif text-harrowBlue">All bids</h3>
                 </div>
-                <button class="text-sm font-semibold text-harrowBlue">+ Quick bid</button>
             </div>
             <div class="mt-4 space-y-4">
+                <div class="flex flex-wrap gap-3 items-center">
+                    <label class="text-xs uppercase tracking-wide text-slate-500">
+                        Lion
+                        <select id="bid-filter-lion" class="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                            <option value="">All lions</option>
+                            {% for lion in lions %}
+                                <option value="{{ lion.slug }}">{{ lion.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="text-xs uppercase tracking-wide text-slate-500">
+                        Search bidder
+                        <input id="bid-filter-bidder" type="text" placeholder="Name or email" class="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700" />
+                    </label>
+                    <label class="text-xs uppercase tracking-wide text-slate-500">
+                        Sort by
+                        <select id="bid-sort" class="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                            <option value="amount-desc" selected>Bid amount (high → low)</option>
+                            <option value="amount-asc">Bid amount (low → high)</option>
+                        </select>
+                    </label>
+                </div>
                 {% if bids %}
-                    {% for bid in bids %}
-                    <article class="p-4 rounded-2xl border border-slate-100">
-                        <div class="flex items-center justify-between">
-                            <p class="text-sm font-semibold text-harrowBlue">{{ bid.bidder }}</p>
-                            <span class="text-xs uppercase tracking-wide text-slate-500">{{ bid.status }}</span>
-                        </div>
-                        <p class="text-sm text-slate-500">{{ bid.lion }}</p>
-                        <p class="text-xs text-slate-500">{{ bid.contact.email }} • {{ bid.contact.phone }}</p>
-                        <div class="mt-2 flex items-center justify-between">
-                            <p class="text-lg font-serif text-harrowGold">${{ '{:,.0f}'.format(bid.amount) }}</p>
-                            <time class="text-xs text-slate-500">{{ bid.timestamp.strftime('%d %b %Y • %H:%M') }}</time>
-                        </div>
-                    </article>
-                    {% endfor %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th class="pb-3">Lion</th>
+                                    <th class="pb-3">Amount</th>
+                                    <th class="pb-3">Bidder</th>
+                                    <th class="pb-3">Contact</th>
+                                    <th class="pb-3">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100" id="bid-table-body">
+                                {% for bid in bids %}
+                                <tr>
+                                    <td class="py-3" data-bid-lion="{{ bid.lion_slug or bid.lion_name or bid.lion }}">
+                                        <div class="text-harrowBlue font-semibold">{{ bid.lion_name or bid.lion }}</div>
+                                    </td>
+                                    <td class="py-3 font-semibold text-harrowGold" data-bid-amount="{{ bid.amount or 0 }}">
+                                        ${{ '{:,.0f}'.format(bid.amount or 0) }}
+                                        <span class="ml-2 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-harrowGold/15 text-harrowBlue hidden" data-highest-bid>Top</span>
+                                    </td>
+                                    <td class="py-3" data-bid-bidder="{{ bid.bidder|lower }}">{{ bid.bidder }}</td>
+                                    <td class="py-3 text-xs text-slate-500" data-bid-contact="{{ (bid.contact.email ~ ' ' ~ (bid.contact.phone or ''))|lower }}">
+                                        {{ bid.contact.email }}{% if bid.contact.phone %} • {{ bid.contact.phone }}{% endif %}
+                                    </td>
+                                    <td class="py-3 text-xs text-slate-500">
+                                        {{ bid.timestamp.strftime('%d %b %Y • %H:%M') }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 {% else %}
                     <p class="text-sm text-slate-500">No bids logged yet.</p>
                 {% endif %}
@@ -108,4 +170,127 @@
         </section>
     </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = Array.from(document.querySelectorAll('[data-admin-tab]'));
+    const panels = Array.from(document.querySelectorAll('[data-admin-panel]'));
+    const lionFilter = document.getElementById('bid-filter-lion');
+    const bidderFilter = document.getElementById('bid-filter-bidder');
+    const sortSelect = document.getElementById('bid-sort');
+    const bidRows = Array.from(document.querySelectorAll('#bid-table-body tr'));
+    if (!tabs.length || !panels.length) {
+        return;
+    }
+
+    const setActive = (target) => {
+        tabs.forEach((tab) => {
+            const isActive = tab.dataset.adminTab === target;
+            tab.classList.toggle('bg-white', isActive);
+            tab.classList.toggle('bg-white/60', !isActive);
+        });
+        panels.forEach((panel) => {
+            panel.classList.toggle('hidden', panel.dataset.adminPanel !== target);
+        });
+    };
+
+    tabs.forEach((tab) => {
+        tab.addEventListener('click', () => setActive(tab.dataset.adminTab));
+    });
+
+    const markHighestBids = () => {
+        const highestByLion = new Map();
+        bidRows.forEach((row) => {
+            if (row.classList.contains('hidden')) {
+                return;
+            }
+            const lionCell = row.querySelector('[data-bid-lion]');
+            const amountCell = row.querySelector('[data-bid-amount]');
+            const highestBadge = row.querySelector('[data-highest-bid]');
+            if (highestBadge) {
+                highestBadge.classList.add('hidden');
+                highestBadge.classList.remove('inline-flex');
+            }
+            const lionKey = (lionCell?.getAttribute('data-bid-lion') || '').toLowerCase();
+            const amountValue = Number(amountCell?.getAttribute('data-bid-amount') || 0);
+            if (!lionKey) {
+                return;
+            }
+            const existing = highestByLion.get(lionKey);
+            if (!existing || amountValue > existing.amount) {
+                highestByLion.set(lionKey, { amount: amountValue, row });
+            }
+        });
+
+        highestByLion.forEach(({ row }) => {
+            const badge = row.querySelector('[data-highest-bid]');
+            if (badge) {
+                badge.classList.remove('hidden');
+                badge.classList.add('inline-flex');
+            }
+        });
+    };
+
+    const applyBidFilters = () => {
+        const lionValue = (lionFilter?.value || '').toLowerCase();
+        const bidderValue = (bidderFilter?.value || '').toLowerCase();
+
+        bidRows.forEach((row) => {
+            const lionCell = row.querySelector('[data-bid-lion]');
+            const amountCell = row.querySelector('[data-bid-amount]');
+            const bidderCell = row.querySelector('[data-bid-bidder]');
+            const contactCell = row.querySelector('[data-bid-contact]');
+
+            const lionText = (lionCell?.getAttribute('data-bid-lion') || '').toLowerCase();
+            const bidderText = (bidderCell?.getAttribute('data-bid-bidder') || '').toLowerCase();
+            const contactText = (contactCell?.getAttribute('data-bid-contact') || '').toLowerCase();
+
+            const matchesLion = !lionValue || lionText.includes(lionValue);
+            const matchesBidder = !bidderValue || bidderText.includes(bidderValue) || contactText.includes(bidderValue);
+
+            row.classList.toggle('hidden', !(matchesLion && matchesBidder));
+        });
+
+        markHighestBids();
+    };
+
+    const applyBidSort = () => {
+        if (!sortSelect) {
+            return;
+        }
+        const value = sortSelect.value;
+        const body = document.getElementById('bid-table-body');
+        if (!body) {
+            return;
+        }
+        const rows = Array.from(body.querySelectorAll('tr'));
+        const direction = value === 'amount-asc' ? 1 : -1;
+        rows.sort((a, b) => {
+            const aValue = Number(a.querySelector('[data-bid-amount]')?.getAttribute('data-bid-amount') || 0);
+            const bValue = Number(b.querySelector('[data-bid-amount]')?.getAttribute('data-bid-amount') || 0);
+            return direction * (aValue - bValue);
+        });
+        rows.forEach((row) => body.appendChild(row));
+        markHighestBids();
+    };
+
+    [lionFilter, bidderFilter].forEach((control) => {
+        if (control) {
+            control.addEventListener('input', applyBidFilters);
+            control.addEventListener('change', applyBidFilters);
+        }
+    });
+
+    if (sortSelect) {
+        sortSelect.addEventListener('change', applyBidSort);
+    }
+
+    setActive('lions');
+    applyBidSort();
+    applyBidFilters();
+});
+</script>
 {% endblock %}

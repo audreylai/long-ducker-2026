@@ -8,10 +8,6 @@
 
     <form method="POST" class="mt-6 space-y-5">
         {{ form.hidden_tag() }}
-        {% if next_url %}
-            <input type="hidden" name="next" value="{{ next_url }}" />
-        {% endif %}
-
         <label class="block text-sm font-semibold text-harrowBlue">
             {{ form.username.label }}
             {{ form.username(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none") }}

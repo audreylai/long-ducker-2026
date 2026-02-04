@@ -9,7 +9,12 @@
     <div class="space-y-6">
         <div>
             <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">House {{ lion.house }}</p>
-            <h2 class="text-4xl font-serif text-harrowBlue">{{ lion.name }}</h2>
+			<div class="flex flex-wrap items-center gap-3">
+                <h2 class="text-4xl font-serif text-harrowBlue">{{ lion.name }}</h2>
+                {% if admin_logged_in and lion.id %}
+                    <a href="{{ url_for('admin_edit_lion', lion_id=lion.id) }}" class="text-xs font-semibold px-3 py-1 rounded-full border border-harrowBlue/30 text-harrowBlue">Edit in admin</a>
+                {% endif %}
+            </div>
             <p class="mt-3 text-slate-600">{{ lion.summary }}</p>
         </div>
         <div class="aspect-4/3 w-full overflow-hidden rounded-3xl bg-slate-200">

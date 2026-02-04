@@ -82,8 +82,6 @@ def normalize_lion_time_fields(lion: Optional[dict]) -> Optional[dict]:
 
 
 def is_bidding_window_open(lion: dict, reference_time: Optional[datetime] = None) -> bool:
-    """Return True when the current time falls within the lion's bidding window."""
-
     reference_time = reference_time or datetime.now(timezone.utc)
     starts_at = ensure_utc_datetime(lion.get("bidding_starts_at"))
     ends_at = ensure_utc_datetime(lion.get("bidding_ends_at"))
@@ -104,16 +102,10 @@ def admin_required(view_func):
     def wrapper(*args, **kwargs):
         if not admin_is_authenticated():
             flash("Please log in to access the admin console.", "warning")
-            return redirect(url_for("admin_login", next=request.path))
+            return redirect(url_for("admin_login"))
         return view_func(*args, **kwargs)
 
     return wrapper
-
-
-def get_safe_admin_redirect(target: Optional[str]) -> str:
-    if target and target.startswith("/"):
-        return target
-    return url_for("admin_dashboard")
 
 
 def serialize_lion_record(record: Optional[dict]) -> Optional[dict]:
@@ -278,8 +270,50 @@ def lions_catalog():
 @admin_required
 def admin_dashboard():
     lions = [normalize_lion_time_fields(lion) for lion in get_lions()]
-    admin_lions = [serialize_lion_record(lion) for lion in lions]
+    now = datetime.now(timezone.utc)
+    admin_lions = []
+    lion_lookup = {}
+    for lion in lions:
+        serialized = serialize_lion_record(lion)
+        serialized["bidding_open"] = is_bidding_window_open(serialized, now)
+        attach_primary_image_url(serialized)
+        admin_lions.append(serialized)
+        if serialized.get("slug"):
+            lion_lookup[serialized["slug"]] = serialized
+        if serialized.get("name"):
+            lion_lookup[serialized["name"]] = serialized
+
     bids = get_bids()
+    enriched_bids = []
+    bids_by_lion = {}
+    for bid in bids:
+        lion_ref = bid.get("lion")
+        lion_match = lion_lookup.get(lion_ref) if lion_ref else None
+        bid["lion_name"] = lion_match.get("name") if lion_match else lion_ref
+        bid["lion_slug"] = lion_match.get("slug") if lion_match else None
+        bid["lion_id"] = lion_match.get("id") if lion_match else None
+        enriched_bids.append(bid)
+
+        group_key = bid.get("lion_id") or bid.get("lion_slug") or lion_ref or "unknown"
+        if group_key not in bids_by_lion:
+            bids_by_lion[group_key] = {
+                "lion": lion_match,
+                "lion_name": bid.get("lion_name") or "Unknown lion",
+                "lion_slug": bid.get("lion_slug"),
+                "lion_id": bid.get("lion_id"),
+                "bids": [],
+            }
+        bids_by_lion[group_key]["bids"].append(bid)
+
+    lion_bid_summaries = []
+    for summary in bids_by_lion.values():
+        summary_bids = summary.get("bids", [])
+        highest_bid = max(summary_bids, key=lambda b: b.get("amount", 0), default=None)
+        summary["highest_bid"] = highest_bid
+        summary["total_bids"] = len(summary_bids)
+        lion_bid_summaries.append(summary)
+
+    lion_bid_summaries.sort(key=lambda item: item.get("lion_name") or "")
     unique_bidders = {bid.get("bidder") for bid in bids if bid.get("bidder")}
     metrics = {
         "total_lions": len(lions),
@@ -287,7 +321,13 @@ def admin_dashboard():
         "unique_bidders": len(unique_bidders),
         "highest_bid": max((bid.get("amount", 0) for bid in bids), default=0),
     }
-    return render_template("admin_dashboard.html", lions=admin_lions, bids=bids, metrics=metrics)
+    return render_template(
+        "admin_dashboard.html",
+        lions=admin_lions,
+        bids=enriched_bids,
+        bid_summaries=lion_bid_summaries,
+        metrics=metrics,
+    )
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
@@ -296,8 +336,6 @@ def admin_login():
         return redirect(url_for("admin_dashboard"))
 
     form = AdminLoginForm()
-    next_url = request.args.get("next") or request.form.get("next")
-    safe_target = get_safe_admin_redirect(next_url)
 
     if form.validate_on_submit():
         username = (form.username.data or "").strip()
@@ -306,10 +344,10 @@ def admin_login():
             session["admin_logged_in"] = True
             session["admin_username"] = username
             flash("Signed in successfully.", "success")
-            return redirect(safe_target)
+            return redirect(url_for("admin_dashboard"))
         form.password.errors.append("Invalid username or password.")
 
-    return render_template("admin_login.html", form=form, next_url=next_url)
+    return render_template("admin_login.html", form=form)
 
 
 @app.route("/admin/logout")
@@ -440,7 +478,6 @@ def admin_export_bids_csv():
         "Bidder",
         "Email",
         "Phone",
-        "Status",
         "Timestamp (UTC)",
     ])
     for bid in bids:
@@ -454,7 +491,6 @@ def admin_export_bids_csv():
                 bid.get("bidder", ""),
                 contact.get("email", ""),
                 contact.get("phone", ""),
-                bid.get("status", ""),
                 timestamp_str,
             ]
         )
@@ -472,6 +508,7 @@ def lion_detail(slug):
         abort(404)
 
     lion = normalize_lion_time_fields(lion)
+    lion = serialize_lion_record(lion)
     attach_primary_image_url(lion)
     now = datetime.now(timezone.utc)
     bidding_open = is_bidding_window_open(lion, now)
@@ -498,7 +535,6 @@ def lion_detail(slug):
                 "bidder": form.name.data,
                 "contact": {"email": form.email.data, "phone": form.phone.data},
                 "timestamp": datetime.now(timezone.utc),
-                "status": "pending",
             }
             insert_bid(bid_document)
             update_lion_current_bid(slug, amount_value)

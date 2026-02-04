@@ -2,9 +2,12 @@ import os
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from dotenv import load_dotenv
 from pymongo import ASCENDING, DESCENDING, MongoClient
 from bson import ObjectId
 from gridfs import GridFS
+
+load_dotenv()
 
 MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
 MONGODB_DB = os.environ.get("MONGODB_DB", "lion-auction")
@@ -49,7 +52,6 @@ def update_lion_current_bid(slug: str, amount: int) -> None:
 
 
 def load_temp_demo_data() -> None:
-    """One-off helper to push sample documents into MongoDB when needed."""
 
     lions_payload = [
         {
@@ -139,7 +141,6 @@ def load_temp_demo_data() -> None:
             "bidder": "Jamie Lee",
             "contact": {"email": "jamie.lee@example.com", "phone": "+852 5566 7788"},
             "timestamp": datetime(2026, 2, 16, 15, 45, tzinfo=timezone.utc),
-            "status": "pending",
         },
         {
             "lion": "prism-runner",
@@ -147,7 +148,6 @@ def load_temp_demo_data() -> None:
             "bidder": "Priya Desai",
             "contact": {"email": "priya.desai@example.com", "phone": "+852 6677 8899"},
             "timestamp": datetime(2026, 2, 15, 11, 15, tzinfo=timezone.utc),
-            "status": "confirmed",
         },
         {
             "lion": "harbor-pulse",
@@ -155,7 +155,6 @@ def load_temp_demo_data() -> None:
             "bidder": "Alex Wong",
             "contact": {"email": "alex.wong@example.com", "phone": "+852 9988 7766"},
             "timestamp": datetime(2026, 2, 14, 9, 5, tzinfo=timezone.utc),
-            "status": "pending",
         },
         {
             "lion": "atlas-bloom",
@@ -163,7 +162,6 @@ def load_temp_demo_data() -> None:
             "bidder": "Noah Reyes",
             "contact": {"email": "noah.reyes@example.com", "phone": "+852 4455 9911"},
             "timestamp": datetime(2026, 2, 13, 10, 20, tzinfo=timezone.utc),
-            "status": "pending",
         },
         {
             "lion": "midnight-voyager",
@@ -171,7 +169,6 @@ def load_temp_demo_data() -> None:
             "bidder": "Maya Patel",
             "contact": {"email": "maya.patel@example.com", "phone": "+852 7788 2211"},
             "timestamp": datetime(2026, 2, 12, 13, 55, tzinfo=timezone.utc),
-            "status": "pending",
         },
         {
             "lion": "lumina-trace",
@@ -179,7 +176,6 @@ def load_temp_demo_data() -> None:
             "bidder": "Ethan Clarke",
             "contact": {"email": "ethan.clarke@example.com", "phone": "+852 8844 6622"},
             "timestamp": datetime(2026, 2, 11, 14, 5, tzinfo=timezone.utc),
-            "status": "confirmed",
         },
         {
             "lion": "solstice-ember",
@@ -187,7 +183,6 @@ def load_temp_demo_data() -> None:
             "bidder": "Morgan Tse",
             "contact": {"email": "morgan.tse@example.com", "phone": "+852 3322 1144"},
             "timestamp": datetime(2026, 2, 15, 16, 40, tzinfo=timezone.utc),
-            "status": "pending",
         },
     ]
 

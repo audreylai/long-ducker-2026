@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="space-y-8">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+            <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Admin</p>
+            <h2 class="text-3xl font-serif text-harrowBlue">Manage Ducks</h2>
+            <p class="text-sm text-slate-500">Quickly edit catalogue entries from a card view.</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ url_for('admin_create_lion') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-harrowBlue text-white text-sm font-semibold">+ Add duck</a>
+            <a href="{{ url_for('admin_dashboard') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-harrowBlue/30 text-harrowBlue text-sm font-semibold">Back to dashboard</a>
+        </div>
+    </div>
+
+    <div class="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {% if lions %}
+            {% for lion in lions %}
+            <article class="group bg-white rounded-3xl shadow-sm border border-white/60 overflow-hidden flex flex-col">
+                <div class="aspect-square w-full overflow-hidden bg-slate-100">
+                    <img src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80' }}" alt="{{ lion.name }}" class="h-full w-full object-cover transition group-hover:scale-[1.02]" />
+                </div>
+                <div class="p-5 space-y-3">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-slate-500">House {{ lion.house or '—' }}</p>
+                        <h3 class="text-xl font-serif text-harrowBlue">{{ lion.name }}</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 line-clamp-3">{{ lion.summary }}</p>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="font-semibold text-harrowGold">${{ '{:,.0f}'.format(lion.current_bid or 0) }}</span>
+                        <span class="text-xs text-slate-500">{{ lion.image_count }} asset{{ '' if lion.image_count == 1 else 's' }}</span>
+                    </div>
+                    <div class="flex gap-2 text-xs">
+                        <a href="{{ url_for('admin_lion_detail', lion_id=lion.id) }}" class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">View</a>
+                        <a href="{{ url_for('admin_edit_lion', lion_id=lion.id) }}" class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Edit</a>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        {% else %}
+            <div class="col-span-full bg-white rounded-3xl p-6 shadow-sm border border-white/60 text-sm text-slate-500">
+                No ducks have been added yet.
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
