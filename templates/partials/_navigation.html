@@ -8,4 +8,8 @@
         {% set is_active = request.path == target or request.path.startswith(target + '/') %}
         <a href="{{ target }}" class="px-3 py-2 rounded-full transition {{ 'bg-white/10 text-white' if is_active else 'text-white/80 hover:text-white' }}">{{ link.label }}</a>
     {% endfor %}
+    {% set admin_endpoint = 'admin_dashboard' if admin_logged_in else 'admin_login' %}
+    {% set admin_target = url_for(admin_endpoint) %}
+    {% set admin_active = request.path.startswith('/admin') %}
+    <a href="{{ admin_target }}" class="px-3 py-2 rounded-full transition {{ 'bg-white/10 text-white' if admin_active else 'text-white/80 hover:text-white' }}">{{ 'Dashboard' if admin_logged_in else 'Admin' }}</a>
 </nav>

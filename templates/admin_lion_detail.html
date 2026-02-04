@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="space-y-6 max-w-4xl mx-auto">
+    <div class="bg-white/90 rounded-3xl p-6 shadow-sm border border-white/60 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Lion profile</p>
+            <h2 class="text-3xl font-serif text-harrowBlue">{{ lion.name }}</h2>
+            <p class="text-sm text-slate-500">House {{ lion.house or '—' }} • slug {{ lion.slug }}</p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ url_for('admin_edit_lion', lion_id=lion.id) }}" class="px-4 py-2 rounded-2xl bg-harrowBlue text-white text-sm font-semibold">Edit</a>
+            <a href="{{ url_for('admin_dashboard') }}" class="px-4 py-2 rounded-2xl border border-harrowBlue/30 text-harrowBlue text-sm font-semibold">Back to dashboard</a>
+        </div>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+        <article class="bg-white/90 rounded-3xl p-6 shadow-sm border border-white/60 space-y-4">
+            <h3 class="text-xl font-serif text-harrowBlue">Story</h3>
+            <p class="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{{ lion.summary }}</p>
+        </article>
+        <article class="bg-white/90 rounded-3xl p-6 shadow-sm border border-white/60 space-y-4">
+            <h3 class="text-xl font-serif text-harrowBlue">Snapshot</h3>
+            <dl class="space-y-2 text-sm">
+                <div class="flex justify-between gap-4">
+                    <dt class="text-slate-500">Record ID</dt>
+                    <dd class="font-semibold text-harrowBlue">{{ lion.id }}</dd>
+                </div>
+                <div class="flex justify-between gap-4">
+                    <dt class="text-slate-500">Current bid</dt>
+                    <dd class="font-semibold text-harrowGold">${{ '{:,.0f}'.format(lion.current_bid or 0) }}</dd>
+                </div>
+                <div class="flex justify-between gap-4">
+                    <dt class="text-slate-500">Bidding window</dt>
+                    <dd class="font-semibold text-harrowBlue">
+                        {% if lion.bidding_starts_at %}
+                            {{ lion.bidding_starts_at.strftime('%d %b • %H:%M') }}
+                        {% else %}
+                            —
+                        {% endif %}
+                        –
+                        {% if lion.bidding_ends_at %}
+                            {{ lion.bidding_ends_at.strftime('%d %b • %H:%M') }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="flex justify-between gap-4">
+                    <dt class="text-slate-500">Created</dt>
+                    <dd class="font-semibold text-harrowBlue">
+                        {% if lion.created_at %}
+                            {{ lion.created_at.strftime('%d %b %Y • %H:%M') }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="flex justify-between gap-4">
+                    <dt class="text-slate-500">Updated</dt>
+                    <dd class="font-semibold text-harrowBlue">
+                        {% if lion.updated_at %}
+                            {{ lion.updated_at.strftime('%d %b %Y • %H:%M') }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+            {% if lion.images %}
+                <div class="mt-4 space-y-3">
+                    <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Uploaded media</p>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        {% for image in lion.images %}
+                        <figure class="overflow-hidden rounded-2xl border border-slate-200 bg-harrowSand/40">
+                            <img src="{{ url_for('admin_lion_image', lion_id=lion.id, image_id=image.id) }}" alt="{{ lion.name }} asset" class="h-48 w-full object-cover" />
+                            <figcaption class="px-4 py-3 text-xs text-slate-600">
+                                <p class="font-semibold text-harrowBlue">{{ image.filename or 'lion-asset' }}</p>
+                                {% if image.uploaded_at %}
+                                <p>{{ image.uploaded_at.strftime('%d %b %Y • %H:%M') }}</p>
+                                {% endif %}
+                            </figcaption>
+                        </figure>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                <p class="text-xs text-slate-500">Upload reference images from the edit screen to showcase this lion.</p>
+            {% endif %}
+        </article>
+    </div>
+</section>
+{% endblock %}

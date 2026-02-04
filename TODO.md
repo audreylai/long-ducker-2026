@@ -1,0 +1,6 @@
+- Fix file upload
+  - Show previews
+  - Remove / cancel
+- Display lion images in slideshow
+- Test with demo lion data
+- Make admin UI functional

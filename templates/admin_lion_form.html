@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set is_edit = mode == 'edit' %}
+<section class="max-w-3xl mx-auto space-y-6">
+    <div class="bg-white/90 rounded-3xl p-6 shadow-sm border border-white/60 flex flex-col gap-2">
+        <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">{{ 'Edit lion' if is_edit else 'New lion' }}</p>
+        <h2 class="text-3xl font-serif text-harrowBlue">{{ lion.name if lion and is_edit else 'Catalogue entry' }}</h2>
+        <p class="text-sm text-slate-500">Set the fields that feed the public listing, bidding windows, and downloadable CSV.</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="bg-white/90 rounded-3xl p-6 shadow-sm border border-white/60 space-y-5">
+        {{ form.hidden_tag() }}
+        <div>
+            <label class="block text-sm font-semibold text-harrowBlue">{{ form.name.label }}
+                {{ form.name(id="lion-name", class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none", placeholder="Eg. Midnight Voyager") }}
+            </label>
+            <p class="mt-1 text-xs text-slate-500">Slug preview: <span id="lion-slug-preview" data-fallback="auto-generated on save">{{ lion.slug if lion and lion.slug else 'auto-generated on save' }}</span></p>
+            {% for error in form.name.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </div>
+        <div class="grid gap-5 sm:grid-cols-2">
+            <div>
+                <label class="block text-sm font-semibold text-harrowBlue">{{ form.house.label }}
+                    {{ form.house(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none", placeholder="Gellhorn") }}
+                </label>
+                {% for error in form.house.errors %}
+                    <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-harrowBlue">{{ form.current_bid.label }}
+                    {{ form.current_bid(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none", placeholder="1000") }}
+                </label>
+                {% for error in form.current_bid.errors %}
+                    <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="grid gap-5 sm:grid-cols-2">
+            <div>
+                <label class="block text-sm font-semibold text-harrowBlue">{{ form.bidding_starts_at.label }}
+                    {{ form.bidding_starts_at(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none") }}
+                </label>
+                {% for error in form.bidding_starts_at.errors %}
+                    <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-harrowBlue">{{ form.bidding_ends_at.label }}
+                    {{ form.bidding_ends_at(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none") }}
+                </label>
+                {% for error in form.bidding_ends_at.errors %}
+                    <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-harrowBlue">{{ form.summary.label }}
+                {{ form.summary(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none", rows="5") }}
+            </label>
+            {% for error in form.summary.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-harrowBlue">{{ form.images.label }}</label>
+            <div id="lion-dropzone" class="relative mt-2 rounded-3xl border-2 border-dashed border-harrowBlue/30 bg-harrowSand/30 px-6 py-8 text-center transition">
+                {{ form.images(id="lion-images", class="absolute inset-0 h-full w-full cursor-pointer opacity-0", multiple=True) }}
+                <div class="pointer-events-none space-y-1">
+                    <p class="text-sm font-semibold text-harrowBlue">Drag & drop files</p>
+                    <p class="text-xs text-slate-500">or click to browse. Accepts JPG, PNG, GIF, WEBP.</p>
+                </div>
+            </div>
+            <ul id="lion-dropzone-list" class="mt-3 hidden text-xs text-slate-600 text-left space-y-1"></ul>
+            {% for error in form.images.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </div>
+        <div class="flex flex-wrap gap-3 pt-4">
+            <button type="submit" class="px-6 py-3 rounded-2xl bg-harrowBlue text-white font-semibold">
+                {{ 'Update lion' if is_edit else 'Create lion' }}
+            </button>
+            <a href="{{ url_for('admin_dashboard') if not (lion and lion.id) else url_for('admin_lion_detail', lion_id=lion.id) }}" class="px-6 py-3 rounded-2xl border border-harrowBlue/30 text-harrowBlue font-semibold">Cancel</a>
+        </div>
+    </form>
+
+    {% if lion and lion.images %}
+    <section class="bg-white/90 rounded-3xl p-6 shadow-sm border border-white/60 space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Existing uploads</p>
+                <h3 class="text-xl font-serif text-harrowBlue">{{ lion.images|length }} asset{{ '' if lion.images|length == 1 else 's' }}</h3>
+            </div>
+            <a href="{{ url_for('admin_lion_detail', lion_id=lion.id) }}" class="text-sm font-semibold text-harrowBlue">View profile</a>
+        </div>
+        <ul class="space-y-3">
+            {% for image in lion.images %}
+            <li class="flex flex-wrap items-center gap-3 justify-between rounded-2xl border border-slate-100 px-4 py-3">
+                <div>
+                    <p class="text-sm font-semibold text-harrowBlue">{{ image.filename or 'lion-asset' }}</p>
+                    <p class="text-xs text-slate-500">
+                        {% if image.uploaded_at %}
+                            {{ image.uploaded_at.strftime('%d %b %Y • %H:%M') }}
+                        {% else %}
+                            Pending processing
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="flex items-center gap-3 text-xs font-semibold">
+                    <a href="{{ url_for('admin_lion_image', lion_id=lion.id, image_id=image.id) }}" class="text-harrowBlue">Preview</a>
+                    <form method="POST" action="{{ url_for('admin_delete_lion_image', lion_id=lion.id, image_id=image.id) }}">
+                        {{ form.csrf_token }}
+                        <button type="submit" class="text-red-600">Remove</button>
+                    </form>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const nameInput = document.getElementById('lion-name');
+    const slugPreview = document.getElementById('lion-slug-preview');
+    const slugFallback = slugPreview ? (slugPreview.dataset.fallback || 'auto-generated on save') : '';
+    const slugify = (value) => value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    if (nameInput && slugPreview) {
+        const updateSlugPreview = () => {
+            const next = slugify(nameInput.value);
+            slugPreview.textContent = next || slugFallback;
+        };
+        nameInput.addEventListener('input', updateSlugPreview);
+    }
+
+    const input = document.getElementById('lion-images');
+    const zone = document.getElementById('lion-dropzone');
+    const list = document.getElementById('lion-dropzone-list');
+    if (!input || !zone || !list) {
+        return;
+    }
+
+    const updateList = (files) => {
+        if (!files || files.length === 0) {
+            list.classList.add('hidden');
+            list.innerHTML = '';
+            return;
+        }
+        list.classList.remove('hidden');
+        list.innerHTML = Array.from(files).map((file) => `<li>${file.name}</li>`).join('');
+    };
+
+    input.addEventListener('change', () => updateList(input.files));
+
+    ['dragenter', 'dragover'].forEach((eventName) => {
+        zone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            zone.classList.add('ring-2', 'ring-harrowBlue/40');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach((eventName) => {
+        zone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (eventName === 'drop') {
+                let files = event.dataTransfer.files;
+                if (typeof DataTransfer !== 'undefined') {
+                    const dt = new DataTransfer();
+                    Array.from(files).forEach((file) => dt.items.add(file));
+                    input.files = dt.files;
+                    files = input.files;
+                }
+                updateList(files);
+            }
+            zone.classList.remove('ring-2', 'ring-harrowBlue/40');
+        });
+    });
+});
+</script>
+{% endblock %}

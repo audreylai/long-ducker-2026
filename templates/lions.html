@@ -5,7 +5,7 @@
     <div>
         <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Catalogue</p>
         <h2 class="text-3xl font-serif text-harrowBlue">Explore the pride</h2>
-        <p class="text-slate-600">Each lion is designed by one of our school houses. Click a sculpture to view its gallery, artist story, and place your bid directly.</p>
+        <p class="text-slate-600">Each lion is designed by one of our school houses. Click a sculpture to view its gallery, story, and place your bid directly.</p>
     </div>
 
     <div class="mt-8 grid gap-6 md:grid-cols-3">
@@ -34,7 +34,7 @@
                     {% set ends_at = lion.bidding_ends_at %}
                     {% set starts_at_hkt = lion.bidding_starts_at_hkt %}
                     {% set ends_at_hkt = lion.bidding_ends_at_hkt %}
-	                <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between">
                         <span class="inline-flex items-center rounded-full px-4 py-1 text-xs font-semibold {% if lion.bidding_open %}bg-emerald-50 text-emerald-700{% elif starts_at and current_time < starts_at %}bg-amber-50 text-amber-700{% else %}bg-slate-100 text-slate-500{% endif %}">
 	                        {% if lion.bidding_open %}
 	                            Live now
@@ -44,7 +44,6 @@
                                 Closed
 	                        {% endif %}
 	                    </span>
-	                    <span class="font-semibold text-harrowBlue">{{ lion.artist }}</span>
 	                </div>
 	            </div>
             </div>

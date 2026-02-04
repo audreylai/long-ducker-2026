@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="max-w-md mx-auto bg-white/90 rounded-3xl p-8 shadow-sm border border-white/60">
+    <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Admin</p>
+    <h2 class="text-3xl font-serif text-harrowBlue">Sign in to manage lions</h2>
+    <p class="mt-2 text-sm text-slate-500">Use the shared admin credentials to reach the operations console.</p>
+
+    <form method="POST" class="mt-6 space-y-5">
+        {{ form.hidden_tag() }}
+        {% if next_url %}
+            <input type="hidden" name="next" value="{{ next_url }}" />
+        {% endif %}
+
+        <label class="block text-sm font-semibold text-harrowBlue">
+            {{ form.username.label }}
+            {{ form.username(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none") }}
+            {% for error in form.username.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </label>
+
+        <label class="block text-sm font-semibold text-harrowBlue">
+            {{ form.password.label }}
+            {{ form.password(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none") }}
+            {% for error in form.password.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </label>
+
+        <button type="submit" class="w-full px-4 py-3 rounded-2xl bg-harrowBlue text-white font-semibold">Access dashboard</button>
+    </form>
+</section>
+{% endblock %}

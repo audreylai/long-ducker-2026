@@ -7,10 +7,15 @@
             <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Admin</p>
             <h2 class="text-3xl font-serif text-harrowBlue">Manage Auction</h2>
         </div>
-        <button class="self-start lg:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-full bg-harrowBlue text-white text-sm font-semibold">
-            Export CSV
-            <span aria-hidden="true">↗</span>
-        </button>
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ url_for('admin_export_bids_csv') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-harrowBlue text-white text-sm font-semibold">
+                Export CSV
+                <span aria-hidden="true">↗</span>
+            </a>
+            <a href="{{ url_for('admin_logout') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-harrowBlue/30 text-harrowBlue text-sm font-semibold">
+                Sign out
+            </a>
+        </div>
     </div>
 
     <div class="grid gap-4 md:grid-cols-4">
@@ -39,25 +44,36 @@
                     <p class="text-xs uppercase tracking-wide text-harrowBlue/60">Lion management</p>
                     <h3 class="text-xl font-serif text-harrowBlue">Current catalogue</h3>
                 </div>
-                <button class="text-sm font-semibold text-harrowBlue">+ Add lion</button>
+                <a href="{{ url_for('admin_create_lion') }}" class="text-sm font-semibold text-harrowBlue">+ Add lion</a>
             </div>
             <div class="mt-4 space-y-4">
-                {% for lion in lions %}
-                <article class="p-4 rounded-2xl border border-slate-100 flex flex-wrap gap-4 items-center justify-between">
-                    <div>
-                        <p class="text-xs uppercase tracking-wide text-slate-500">House {{ lion.house }}</p>
-                        <p class="text-lg font-semibold text-harrowBlue">{{ lion.name }}</p>
-                    </div>
-                    <div class="text-sm text-right">
-                        <p class="text-slate-500">Current bid</p>
-                        <p class="font-semibold text-harrowGold">${{ '{:,.0f}'.format(lion.current_bid) }}</p>
-                    </div>
-                    <div class="flex gap-2 text-xs">
-                        <button class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Edit</button>
-                        <button class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">View bids</button>
-                    </div>
-                </article>
-                {% endfor %}
+                {% if lions %}
+                    {% for lion in lions %}
+                    <article class="p-4 rounded-2xl border border-slate-100 flex flex-wrap gap-4 items-center justify-between">
+                        <div>
+                            <p class="text-xs uppercase tracking-wide text-slate-500">House {{ lion.house or '—' }}</p>
+                            <p class="text-lg font-semibold text-harrowBlue">{{ lion.name }}</p>
+                            <p class="text-xs text-slate-500">{{ lion.image_count }} asset{{ '' if lion.image_count == 1 else 's' }}</p>
+                        </div>
+                        <div class="text-sm text-right">
+                            <p class="text-slate-500">Updated</p>
+                            <p class="font-semibold text-harrowBlue">
+                                {% if lion.updated_at %}
+                                    {{ lion.updated_at.strftime('%d %b %Y') }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="flex gap-2 text-xs">
+                            <a href="{{ url_for('admin_lion_detail', lion_id=lion.id) }}" class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">View</a>
+                            <a href="{{ url_for('admin_edit_lion', lion_id=lion.id) }}" class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Edit</a>
+                        </div>
+                    </article>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-sm text-slate-500">No lions have been added yet.</p>
+                {% endif %}
             </div>
         </section>
 
@@ -70,47 +86,26 @@
                 <button class="text-sm font-semibold text-harrowBlue">+ Quick bid</button>
             </div>
             <div class="mt-4 space-y-4">
-                {% for bid in bids %}
-                <article class="p-4 rounded-2xl border border-slate-100">
-                    <div class="flex items-center justify-between">
-                        <p class="text-sm font-semibold text-harrowBlue">{{ bid.bidder }}</p>
-                        <span class="text-xs uppercase tracking-wide text-slate-500">{{ bid.status }}</span>
-                    </div>
-                    <p class="text-sm text-slate-500">{{ bid.lion }} • {{ bid.contact.email }}</p>
-                    <div class="mt-2 flex items-center justify-between">
-                        <p class="text-lg font-serif text-harrowGold">${{ '{:,.0f}'.format(bid.amount) }}</p>
-                        <time class="text-xs text-slate-500">{{ bid.timestamp.strftime('%d %b %Y • %H:%M') }}</time>
-                    </div>
-                    <div class="mt-3 flex gap-2 text-xs">
-                        <button class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Approve</button>
-                        <button class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Decline</button>
-                        <button class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Message</button>
-                    </div>
-                </article>
-                {% endfor %}
+                {% if bids %}
+                    {% for bid in bids %}
+                    <article class="p-4 rounded-2xl border border-slate-100">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-semibold text-harrowBlue">{{ bid.bidder }}</p>
+                            <span class="text-xs uppercase tracking-wide text-slate-500">{{ bid.status }}</span>
+                        </div>
+                        <p class="text-sm text-slate-500">{{ bid.lion }}</p>
+                        <p class="text-xs text-slate-500">{{ bid.contact.email }} • {{ bid.contact.phone }}</p>
+                        <div class="mt-2 flex items-center justify-between">
+                            <p class="text-lg font-serif text-harrowGold">${{ '{:,.0f}'.format(bid.amount) }}</p>
+                            <time class="text-xs text-slate-500">{{ bid.timestamp.strftime('%d %b %Y • %H:%M') }}</time>
+                        </div>
+                    </article>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-sm text-slate-500">No bids logged yet.</p>
+                {% endif %}
             </div>
         </section>
     </div>
-
-    <section class="bg-harrowBlue text-white rounded-3xl p-6 grid gap-4 md:grid-cols-3">
-        <div>
-            <p class="text-xs uppercase tracking-[0.4em] text-harrowGold">Next actions</p>
-            <h3 class="text-2xl font-serif">Operations list</h3>
-        </div>
-        <ul class="md:col-span-2 space-y-3 text-sm">
-            <li class="flex items-start gap-3">
-                <span class="mt-1 h-2 w-2 rounded-full bg-harrowGold"></span>
-                Publish the evening lot order to parents by 29 Feb.
-            </li>
-            <li class="flex items-start gap-3">
-                <span class="mt-1 h-2 w-2 rounded-full bg-harrowGold"></span>
-                Sync winning bidder CSV with finance for pledge collection.
-            </li>
-            <li class="flex items-start gap-3">
-                <span class="mt-1 h-2 w-2 rounded-full bg-harrowGold"></span>
-                Confirm sockets channel for live ticker with AV crew.
-            </li>
-        </ul>
-    </section>
 </section>
 {% endblock %}

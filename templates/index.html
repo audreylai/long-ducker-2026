@@ -2,7 +2,7 @@
 
 {% block content %}
 {% set hero_lion = highlight_lions|first %}
-<section class="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] items-start">
+<section class="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] items-start">
 	<div class="space-y-6">
 		<p class="text-sm uppercase tracking-[0.4em] text-harrowBlue/70">{{ long_ducker_date }} • Long Ducker</p>
 		<div class="space-y-4">
@@ -21,7 +21,7 @@
 			<div class="bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm">
 				<p class="text-xs uppercase tracking-wide text-slate-500">Highest bid</p>
 				{% if top_bid %}
-				<p class="text-lg font-semibold text-harrowBlue">{{ top_bid.lion }}</p>
+				<p class="text-lg font-semibold text-harrowBlue">{{ top_bid_lion_name or top_bid.lion }}</p>
 				<p class="text-2xl font-serif text-harrowGold">${{ '{:,.0f}'.format(top_bid.amount) }}</p>
 				{% else %}
 				<p class="text-2xl font-serif text-harrowBlue">-</p>
@@ -76,7 +76,7 @@
 				<span class="h-10 w-10 rounded-full bg-harrowBlue text-white font-semibold flex items-center justify-center">1</span>
 				<div>
 					<p class="font-semibold text-harrowBlue">Browse the pride</p>
-					<p class="text-sm text-slate-600">Review artist statements, reserve prices, and current bids for each lion.</p>
+					<p class="text-sm text-slate-600">Review lion stories, reserve prices, and current bids for each sculpture.</p>
 				</div>
 			</li>
 			<li class="flex gap-4">
