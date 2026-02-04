@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="space-y-10">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+            <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Admin</p>
+            <h2 class="text-3xl font-serif text-harrowBlue">Manage Auction</h2>
+        </div>
+        <button class="self-start lg:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-full bg-harrowBlue text-white text-sm font-semibold">
+            Export CSV
+            <span aria-hidden="true">↗</span>
+        </button>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-4">
+        <article class="bg-white rounded-3xl p-4 shadow-sm border border-white/60">
+            <p class="text-xs uppercase tracking-wide text-slate-500">Registered lions</p>
+            <p class="text-3xl font-serif text-harrowBlue">{{ metrics.total_lions }}</p>
+        </article>
+        <article class="bg-white rounded-3xl p-4 shadow-sm border border-white/60">
+            <p class="text-xs uppercase tracking-wide text-slate-500">Bids logged</p>
+            <p class="text-3xl font-serif text-harrowBlue">{{ metrics.total_bids }}</p>
+        </article>
+        <article class="bg-white rounded-3xl p-4 shadow-sm border border-white/60">
+            <p class="text-xs uppercase tracking-wide text-slate-500">Unique bidders</p>
+            <p class="text-3xl font-serif text-harrowBlue">{{ metrics.unique_bidders }}</p>
+        </article>
+        <article class="bg-white rounded-3xl p-4 shadow-sm border border-white/60">
+            <p class="text-xs uppercase tracking-wide text-slate-500">Top amount</p>
+            <p class="text-3xl font-serif text-harrowBlue">${{ '{:,.0f}'.format(metrics.highest_bid) }}</p>
+        </article>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+        <section class="bg-white rounded-3xl p-6 shadow-sm border border-white/60">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-harrowBlue/60">Lion management</p>
+                    <h3 class="text-xl font-serif text-harrowBlue">Current catalogue</h3>
+                </div>
+                <button class="text-sm font-semibold text-harrowBlue">+ Add lion</button>
+            </div>
+            <div class="mt-4 space-y-4">
+                {% for lion in lions %}
+                <article class="p-4 rounded-2xl border border-slate-100 flex flex-wrap gap-4 items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-slate-500">House {{ lion.house }}</p>
+                        <p class="text-lg font-semibold text-harrowBlue">{{ lion.name }}</p>
+                    </div>
+                    <div class="text-sm text-right">
+                        <p class="text-slate-500">Current bid</p>
+                        <p class="font-semibold text-harrowGold">${{ '{:,.0f}'.format(lion.current_bid) }}</p>
+                    </div>
+                    <div class="flex gap-2 text-xs">
+                        <button class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Edit</button>
+                        <button class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">View bids</button>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="bg-white rounded-3xl p-6 shadow-sm border border-white/60">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-harrowBlue/60">Live bids</p>
+                    <h3 class="text-xl font-serif text-harrowBlue">Queue</h3>
+                </div>
+                <button class="text-sm font-semibold text-harrowBlue">+ Quick bid</button>
+            </div>
+            <div class="mt-4 space-y-4">
+                {% for bid in bids %}
+                <article class="p-4 rounded-2xl border border-slate-100">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-semibold text-harrowBlue">{{ bid.bidder }}</p>
+                        <span class="text-xs uppercase tracking-wide text-slate-500">{{ bid.status }}</span>
+                    </div>
+                    <p class="text-sm text-slate-500">{{ bid.lion }} • {{ bid.contact.email }}</p>
+                    <div class="mt-2 flex items-center justify-between">
+                        <p class="text-lg font-serif text-harrowGold">${{ '{:,.0f}'.format(bid.amount) }}</p>
+                        <time class="text-xs text-slate-500">{{ bid.timestamp.strftime('%d %b %Y • %H:%M') }}</time>
+                    </div>
+                    <div class="mt-3 flex gap-2 text-xs">
+                        <button class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Approve</button>
+                        <button class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Decline</button>
+                        <button class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Message</button>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <section class="bg-harrowBlue text-white rounded-3xl p-6 grid gap-4 md:grid-cols-3">
+        <div>
+            <p class="text-xs uppercase tracking-[0.4em] text-harrowGold">Next actions</p>
+            <h3 class="text-2xl font-serif">Operations list</h3>
+        </div>
+        <ul class="md:col-span-2 space-y-3 text-sm">
+            <li class="flex items-start gap-3">
+                <span class="mt-1 h-2 w-2 rounded-full bg-harrowGold"></span>
+                Publish the evening lot order to parents by 29 Feb.
+            </li>
+            <li class="flex items-start gap-3">
+                <span class="mt-1 h-2 w-2 rounded-full bg-harrowGold"></span>
+                Sync winning bidder CSV with finance for pledge collection.
+            </li>
+            <li class="flex items-start gap-3">
+                <span class="mt-1 h-2 w-2 rounded-full bg-harrowGold"></span>
+                Confirm sockets channel for live ticker with AV crew.
+            </li>
+        </ul>
+    </section>
+</section>
+{% endblock %}

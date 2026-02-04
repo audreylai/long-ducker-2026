@@ -1,0 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Space+Grotesk:wght@400;500;600&display=swap");
+
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "@tailwindcss/forms";
+
+@theme {
+	--color-harrowBlue: #001E60;
+	--color-harrowGold: #C8A300;
+	--color-harrowSky: #7BA9D0;
+	--color-harrowSand: #F5E8C8;
+
+	--font-serif: "Playfair Display", serif;
+	--font-sans: "Space Grotesk", system-ui, sans-serif;
+}
+
+@layer base {
+	html {
+		font-family: var(--font-sans);
+	}
+}

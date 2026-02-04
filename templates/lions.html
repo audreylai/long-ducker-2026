@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+    <div>
+        <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Catalogue</p>
+        <h2 class="text-3xl font-serif text-harrowBlue">Explore the pride</h2>
+        <p class="text-slate-600">Each lion is designed by one of our school houses. Click a sculpture to view its gallery, artist story, and place your bid directly.</p>
+    </div>
+
+    <div class="mt-8 grid gap-6 md:grid-cols-3">
+        {% for lion in lions %}
+        <a href="{{ url_for('lion_detail', slug=lion.slug) }}" class="block bg-white rounded-3xl shadow-sm border border-white/60 transition hover:-translate-y-1 hover:shadow-lg">
+            <div class="aspect-square w-full overflow-hidden rounded-3xl">
+                <img src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80' }}" alt="{{ lion.name }} sculpture" class="h-full w-full object-cover" />
+            </div>
+            <div class="p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-slate-500">House {{ lion.house }}</p>
+                    <h3 class="text-2xl font-serif text-harrowBlue">{{ lion.name }}</h3>
+                </div>
+                <span class="font-semibold text-harrowGold">${{ '{:,.0f}'.format(lion.current_bid or 0) }}</span>
+            </div>
+            <p class="mt-4 text-sm text-slate-600">{{ lion.summary }}</p>
+            <div class="flex items-center justify-between">
+            {% if lion.bidding_starts_at_hkt and lion.bidding_ends_at_hkt %}
+                <p class="text-xs font-medium text-slate-500">
+                    {{ lion.bidding_starts_at_hkt.strftime('%d %b %Y') }} - {{ lion.bidding_ends_at_hkt.strftime('%d %b %Y') }}
+                </p>
+                {% endif %}
+                <div class="space-y-2 text-sm">
+                    {% set starts_at = lion.bidding_starts_at %}
+                    {% set ends_at = lion.bidding_ends_at %}
+                    {% set starts_at_hkt = lion.bidding_starts_at_hkt %}
+                    {% set ends_at_hkt = lion.bidding_ends_at_hkt %}
+	                <div class="flex items-center justify-between">
+                        <span class="inline-flex items-center rounded-full px-4 py-1 text-xs font-semibold {% if lion.bidding_open %}bg-emerald-50 text-emerald-700{% elif starts_at and current_time < starts_at %}bg-amber-50 text-amber-700{% else %}bg-slate-100 text-slate-500{% endif %}">
+	                        {% if lion.bidding_open %}
+	                            Live now
+	                        {% elif starts_at and current_time < starts_at %}
+                                {% if starts_at_hkt %}Opens {{ starts_at_hkt.strftime('%d %b %H:%M') }}{% else %}Opens soon{% endif %}
+	                        {% else %}
+                                Closed
+	                        {% endif %}
+	                    </span>
+	                    <span class="font-semibold text-harrowBlue">{{ lion.artist }}</span>
+	                </div>
+	            </div>
+            </div>
+			<span class="text-harrowBlue/60 inline-flex items-center gap-1">View & bid <span aria-hidden="true">→</span></span>
+
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
