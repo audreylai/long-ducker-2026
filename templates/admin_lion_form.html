@@ -151,6 +151,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isAllowedType = (file) => allowedTypes.has(file.type);
 
+    const MAX_IMAGE_DIM = 1600;
+    const OUTPUT_QUALITY = 0.8;
+
     const renderPreviewList = (files, allowRemove) => {
         if (!files.length) {
             list.classList.add('hidden');
@@ -197,7 +200,50 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPreviewList(Array.from(dt.files), true);
     };
 
-    const addFiles = (files) => {
+    const compressImageFile = (file) => new Promise((resolve) => {
+        if (!file || !file.type.startsWith('image/')) {
+            resolve(file);
+            return;
+        }
+        const img = new Image();
+        const reader = new FileReader();
+        reader.onload = () => {
+            img.onload = () => {
+                const scale = Math.min(1, MAX_IMAGE_DIM / Math.max(img.width, img.height));
+                const targetWidth = Math.round(img.width * scale);
+                const targetHeight = Math.round(img.height * scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    resolve(file);
+                    return;
+                }
+                ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) {
+                            resolve(file);
+                            return;
+                        }
+                        const compressed = new File([blob], file.name.replace(/\.[^/.]+$/, '') + '.webp', {
+                            type: 'image/webp',
+                        });
+                        resolve(compressed);
+                    },
+                    'image/webp',
+                    OUTPUT_QUALITY
+                );
+            };
+            img.onerror = () => resolve(file);
+            img.src = reader.result;
+        };
+        reader.onerror = () => resolve(file);
+        reader.readAsDataURL(file);
+    });
+
+    const addFiles = async (files) => {
         const incoming = Array.from(files || []);
         const invalidFiles = incoming.filter((file) => !isAllowedType(file));
         const validFiles = incoming.filter((file) => isAllowedType(file));
@@ -208,7 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPreviewList(validFiles, false);
             return;
         }
-        validFiles.forEach((file) => dt.items.add(file));
+        const compressedFiles = await Promise.all(validFiles.map((file) => compressImageFile(file)));
+        compressedFiles.forEach((file) => dt.items.add(file));
         syncInputFiles();
     };
 
