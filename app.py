@@ -20,6 +20,7 @@ from flask import (
     session,
     url_for,
 )
+from PIL import Image
 from werkzeug.utils import secure_filename
 
 from db import (
@@ -48,6 +49,8 @@ HKT_TZ = timezone(timedelta(hours=8))
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "harrow-lion-2026")
 ALLOWED_LION_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
+MAX_LION_IMAGE_DIM = int(os.environ.get("MAX_LION_IMAGE_DIM", "1600"))
+LION_IMAGE_QUALITY = int(os.environ.get("LION_IMAGE_QUALITY", "80"))
 
 
 def ensure_utc_datetime(value: Optional[datetime]) -> Optional[datetime]:
@@ -211,17 +214,30 @@ def extract_lion_uploads(form: AdminLionForm) -> List[dict]:
         content = storage.read()
         if not content:
             continue
+        compressed_content, content_type, extension = compress_lion_image(content)
+        base_name = os.path.splitext(filename)[0] or "lion-image"
+        compressed_filename = f"{base_name}.{extension}"
         uploads.append(
             {
-                "filename": filename,
-                "content": content,
-                "content_type": storage.mimetype,
+                "filename": compressed_filename,
+                "content": compressed_content,
+                "content_type": content_type,
             }
         )
 
     if form.images.errors:
         uploads.clear()
     return uploads
+
+
+def compress_lion_image(content: bytes) -> tuple[bytes, str, str]:
+    """Compress uploaded images and return (content, content_type, extension)."""
+    with Image.open(io.BytesIO(content)) as img:
+        img = img.convert("RGB")
+        img.thumbnail((MAX_LION_IMAGE_DIM, MAX_LION_IMAGE_DIM))
+        buffer = io.BytesIO()
+        img.save(buffer, format="WEBP", quality=LION_IMAGE_QUALITY, optimize=True, method=6)
+    return buffer.getvalue(), "image/webp", "webp"
 
 
 @app.route("/")
@@ -438,11 +454,13 @@ def stream_lion_image(lion_id: str, image_id: str):
     file_obj = get_lion_image_file(lion_id, image_id)
     if not file_obj:
         abort(404)
-    return send_file(
+    response = send_file(
         io.BytesIO(file_obj.read()),
         mimetype=getattr(file_obj, "content_type", "application/octet-stream"),
         download_name=file_obj.filename or f"lion-{image_id}",
     )
+    response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
 
 
 @app.route("/lions/<lion_id>/images/<image_id>")
