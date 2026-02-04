@@ -159,5 +159,5 @@ def inject_global_context():
     return {"current_year": now.year, "current_time": now}
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+# if __name__ == "__main__":
+#     app.run(debug=True)
