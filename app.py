@@ -623,5 +623,5 @@ def inject_global_context():
         "admin_logged_in": admin_is_authenticated(),
     }
 
-if __name__ == "__main__":
-    app.run(debug=True)
+# if __name__ == "__main__":
+#     app.run(debug=True)
