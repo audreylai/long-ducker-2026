@@ -1,11 +1,9 @@
 import csv
 import io
 import os
-import re
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 from typing import List, Optional
-from uuid import uuid4
 
 from dotenv import load_dotenv
 from flask import (
@@ -15,12 +13,13 @@ from flask import (
     make_response,
     redirect,
     render_template,
-    request,
     send_file,
     session,
     url_for,
 )
 from PIL import Image
+import qrcode
+from qrcode.constants import ERROR_CORRECT_Q
 from werkzeug.utils import secure_filename
 
 from db import (
@@ -30,7 +29,6 @@ from db import (
     get_lion_by_id,
     get_lion_image_file,
     get_lion_images,
-    get_lion_by_slug,
     get_lions,
     get_lions_by_bid,
     insert_bid,
@@ -149,26 +147,7 @@ def attach_primary_image_url(lion: Optional[dict]) -> Optional[dict]:
     return lion
 
 
-def slugify_name(value: str) -> str:
-    base = re.sub(r"[^a-z0-9]+", "-", (value or "").lower()).strip("-")
-    return base or f"lion-{uuid4().hex[:6]}"
-
-
-def ensure_unique_lion_slug(base_slug: str, current_id: Optional[str] = None) -> str:
-    base_slug = base_slug or f"lion-{uuid4().hex[:6]}"
-    slug = base_slug
-    counter = 1
-    while True:
-        existing = get_lion_by_slug(slug)
-        if not existing:
-            return slug
-        if current_id and str(existing.get("_id")) == str(current_id):
-            return slug
-        slug = f"{base_slug}-{counter}"
-        counter += 1
-
-
-def lion_payload_from_form(form: AdminLionForm, current_lion_id: Optional[str] = None) -> dict:
+def lion_payload_from_form(form: AdminLionForm) -> dict:
     payload = {
         "name": (form.name.data or "").strip(),
         "house": (form.house.data or "").strip() or None,
@@ -179,15 +158,15 @@ def lion_payload_from_form(form: AdminLionForm, current_lion_id: Optional[str] =
     else:
         payload["current_bid"] = 0
     if form.bidding_starts_at.data:
-        payload["bidding_starts_at"] = form.bidding_starts_at.data.replace(tzinfo=timezone.utc)
+        local_start = form.bidding_starts_at.data.replace(tzinfo=HKT_TZ)
+        payload["bidding_starts_at"] = local_start.astimezone(timezone.utc)
     else:
         payload["bidding_starts_at"] = None
     if form.bidding_ends_at.data:
-        payload["bidding_ends_at"] = form.bidding_ends_at.data.replace(tzinfo=timezone.utc)
+        local_end = form.bidding_ends_at.data.replace(tzinfo=HKT_TZ)
+        payload["bidding_ends_at"] = local_end.astimezone(timezone.utc)
     else:
         payload["bidding_ends_at"] = None
-    base_slug = slugify_name(payload["name"])
-    payload["slug"] = ensure_unique_lion_slug(base_slug, current_id=current_lion_id)
     return payload
 
 
@@ -247,18 +226,23 @@ def home():
         normalized = normalize_lion_time_fields(lion)
         attach_primary_image_url(normalized)
         highlight_lions.append(normalized)
-    slug_to_name = {
-        lion.get("slug"): lion.get("name")
-        for lion in get_lions()
-        if lion.get("slug") and lion.get("name")
-    }
+    lion_name_lookup = {}
+    for lion in get_lions():
+        lion_id = lion.get("_id")
+        lion_name = lion.get("name")
+        if lion_id and lion_name:
+            lion_name_lookup[str(lion_id)] = lion_name
+        if lion_name:
+            lion_name_lookup[lion_name] = lion_name
+        if lion.get("slug") and lion_name:
+            lion_name_lookup[lion.get("slug")] = lion_name
     bids = get_bids()
     total_raised = sum(bid.get("amount", 0) for bid in bids)
     top_bid = max(bids, key=lambda bid: bid.get("amount", 0)) if bids else None
     top_bid_lion_name = None
     if top_bid:
-        lion_ref = top_bid.get("lion")
-        top_bid_lion_name = slug_to_name.get(lion_ref) or lion_ref
+        lion_ref = top_bid.get("lion_id") or top_bid.get("lion_name") or top_bid.get("lion")
+        top_bid_lion_name = lion_name_lookup.get(lion_ref) or top_bid.get("lion_name") or top_bid.get("lion")
     return render_template(
         "index.html",
         highlight_lions=highlight_lions,
@@ -276,9 +260,10 @@ def lions_catalog():
     lions = []
     for lion in raw_lions:
         normalized = normalize_lion_time_fields(lion)
-        normalized["bidding_open"] = is_bidding_window_open(normalized, now)
-        attach_primary_image_url(normalized)
-        lions.append(normalized)
+        serialized = serialize_lion_record(normalized)
+        serialized["bidding_open"] = is_bidding_window_open(serialized, now)
+        attach_primary_image_url(serialized)
+        lions.append(serialized)
     return render_template("lions.html", lions=lions)
 
 
@@ -294,29 +279,31 @@ def admin_dashboard():
         serialized["bidding_open"] = is_bidding_window_open(serialized, now)
         attach_primary_image_url(serialized)
         admin_lions.append(serialized)
-        if serialized.get("slug"):
-            lion_lookup[serialized["slug"]] = serialized
+        if serialized.get("id"):
+            lion_lookup[serialized["id"]] = serialized
         if serialized.get("name"):
             lion_lookup[serialized["name"]] = serialized
+        if serialized.get("slug"):
+            lion_lookup[serialized["slug"]] = serialized
 
     bids = get_bids()
     enriched_bids = []
     bids_by_lion = {}
     for bid in bids:
-        lion_ref = bid.get("lion")
+        lion_ref = bid.get("lion_id") or bid.get("lion")
         lion_match = lion_lookup.get(lion_ref) if lion_ref else None
-        bid["lion_name"] = lion_match.get("name") if lion_match else lion_ref
-        bid["lion_slug"] = lion_match.get("slug") if lion_match else None
-        bid["lion_id"] = lion_match.get("id") if lion_match else None
+        if not lion_match and bid.get("lion_name"):
+            lion_match = lion_lookup.get(bid.get("lion_name"))
+        bid["lion_name"] = lion_match.get("name") if lion_match else (bid.get("lion_name") or bid.get("lion"))
+        bid["lion_id"] = bid.get("lion_id") or (lion_match.get("id") if lion_match else None)
         enriched_bids.append(bid)
 
-        group_key = bid.get("lion_id") or bid.get("lion_slug") or lion_ref or "unknown"
+        group_key = bid.get("lion_id") or (lion_match.get("id") if lion_match else None) or (bid.get("lion_name") or bid.get("lion") or "unknown")
         if group_key not in bids_by_lion:
             bids_by_lion[group_key] = {
                 "lion": lion_match,
                 "lion_name": bid.get("lion_name") or "Unknown lion",
-                "lion_slug": bid.get("lion_slug"),
-                "lion_id": bid.get("lion_id"),
+                "lion_id": bid.get("lion_id") or (lion_match.get("id") if lion_match else None),
                 "bids": [],
             }
         bids_by_lion[group_key]["bids"].append(bid)
@@ -399,14 +386,42 @@ def admin_create_lion():
 @app.route("/admin/lions/<lion_id>")
 @admin_required
 def admin_lion_detail(lion_id):
+    source_lion = normalize_lion_time_fields(get_lion_by_id(lion_id))
+    lion = serialize_lion_record(source_lion)
+    if not lion:
+        abort(404)
+    lion["images"] = get_lion_images(lion_id)
+    return render_template("admin_lion_detail.html", lion=lion)
+
+
+@app.route("/admin/lions/<lion_id>/qr.png")
+@admin_required
+def admin_lion_qr(lion_id):
     lion = get_lion_by_id(lion_id)
     if not lion:
         abort(404)
-    slug = lion.get("slug")
-    if not slug:
-        flash("This lion is missing a public slug. Edit and save it to regenerate one.", "warning")
-        return redirect(url_for("admin_edit_lion", lion_id=lion_id))
-    return redirect(url_for("lion_detail", slug=slug))
+
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=ERROR_CORRECT_Q,
+        box_size=10,
+        border=2,
+    )
+    lion_url = url_for("lion_detail", lion_id=lion_id, _external=True)
+    qr.add_data(f"{lion_url}#lion={lion_id}")
+    qr.make(fit=True)
+    image = qr.make_image(fill_color="#0F172A", back_color="white")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    response = send_file(
+        buffer,
+        mimetype="image/png",
+        download_name=f"lion-{lion_id}-qr.png",
+    )
+    response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
 
 
 @app.route("/admin/lions/<lion_id>/edit", methods=["GET", "POST"])
@@ -427,9 +442,9 @@ def admin_edit_lion(lion_id):
         starts = lion.get("bidding_starts_at")
         ends = lion.get("bidding_ends_at")
         if starts:
-            form.bidding_starts_at.data = starts.astimezone(timezone.utc).replace(tzinfo=None)
+            form.bidding_starts_at.data = starts.astimezone(HKT_TZ).replace(tzinfo=None)
         if ends:
-            form.bidding_ends_at.data = ends.astimezone(timezone.utc).replace(tzinfo=None)
+            form.bidding_ends_at.data = ends.astimezone(HKT_TZ).replace(tzinfo=None)
 
     if form.validate_on_submit():
         uploads = extract_lion_uploads(form)
@@ -519,9 +534,9 @@ def admin_export_bids_csv():
     return response
 
 
-@app.route("/lions/<slug>", methods=["GET", "POST"])
-def lion_detail(slug):
-    lion = get_lion_by_slug(slug)
+@app.route("/lions/<lion_id>", methods=["GET", "POST"])
+def lion_detail(lion_id):
+    lion = get_lion_by_id(lion_id)
     if not lion:
         abort(404)
 
@@ -534,33 +549,43 @@ def lion_detail(slug):
 
     form = LionBidForm()
     if not form.is_submitted():
-        form.lion_slug.data = slug
+        form.lion_id.data = lion_id
 
     if form.validate_on_submit():
         amount_value = int(form.amount.data)
         current = int(lion.get("current_bid") or 0)
 
-        if form.lion_slug.data != slug:
-            form.lion_slug.errors.append("Invalid lion reference.")
+        if form.lion_id.data != lion_id:
+            form.lion_id.errors.append("Invalid lion reference.")
         elif not bidding_open:
             form.amount.errors.append("Bidding is closed for this lion.")
         elif amount_value <= current:
             form.amount.errors.append("Bid must exceed the current amount.")
         else:
             bid_document = {
-                "lion": lion.get("slug") or lion.get("name"),
+                "lion": lion.get("name"),
+                "lion_id": lion.get("id"),
+                "lion_name": lion.get("name"),
                 "amount": amount_value,
                 "bidder": form.name.data,
                 "contact": {"email": form.email.data, "phone": form.phone.data},
                 "timestamp": datetime.now(timezone.utc),
             }
             insert_bid(bid_document)
-            update_lion_current_bid(slug, amount_value)
+            update_lion_current_bid(lion_id, amount_value)
             flash("Bid submitted successfully. We'll be in touch soon!", "success")
-            return redirect(url_for("lion_detail", slug=slug))
+            return redirect(url_for("lion_detail", lion_id=lion_id))
+
+    legacy_refs = {lion.get("name")}
+    if lion.get("slug"):
+        legacy_refs.add(lion.get("slug"))
 
     related_bids = [
-        bid for bid in get_bids() if bid.get("lion") in {lion.get("slug"), lion.get("name")}
+        bid
+        for bid in get_bids()
+        if bid.get("lion_id") == lion_id
+        or bid.get("lion_name") in legacy_refs
+        or bid.get("lion") in legacy_refs
     ]
     return render_template(
         "lion_detail.html",
@@ -571,6 +596,24 @@ def lion_detail(slug):
         current_time=now,
     )
 
+@app.route("/map")
+def map_view():
+    trail_lions = []
+    for record in get_lions():
+        serialized = serialize_lion_record(record)
+        if not serialized:
+            continue
+        attach_primary_image_url(serialized)
+        trail_lions.append(serialized)
+
+    trail_lions.sort(key=lambda lion: lion.get("name") or "")
+    print(trail_lions)
+    return render_template(
+        "map.html",
+        lions=trail_lions,
+        total_stops=len(trail_lions),
+    )
+
 @app.context_processor
 def inject_global_context():
     now = datetime.now(timezone.utc)
@@ -579,3 +622,6 @@ def inject_global_context():
         "current_time": now,
         "admin_logged_in": admin_is_authenticated(),
     }
+
+if __name__ == "__main__":
+    app.run(debug=True)

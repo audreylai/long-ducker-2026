@@ -2,6 +2,7 @@
     {% set nav_links = [
         {"label": "Overview", "endpoint": "home"},
         {"label": "Lions", "endpoint": "lions_catalog"},
+        {"label": "Map", "endpoint": "map_view"},
     ] %}
     {% for link in nav_links %}
         {% set target = url_for(link.endpoint) %}

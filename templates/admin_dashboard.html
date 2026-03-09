@@ -113,7 +113,7 @@
                         <select id="bid-filter-lion" class="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700">
                             <option value="">All lions</option>
                             {% for lion in lions %}
-                                <option value="{{ lion.slug }}">{{ lion.name }}</option>
+                                <option value="{{ lion.id }}">{{ lion.name }}</option>
                             {% endfor %}
                         </select>
                     </label>
@@ -144,7 +144,7 @@
                             <tbody class="divide-y divide-slate-100" id="bid-table-body">
                                 {% for bid in bids %}
                                 <tr>
-                                    <td class="py-3" data-bid-lion="{{ bid.lion_slug or bid.lion_name or bid.lion }}">
+                                    <td class="py-3" data-bid-lion="{{ ((bid.lion_id or '') ~ ' ' ~ (bid.lion_name or bid.lion or ''))|trim }}">
                                         <div class="text-harrowBlue font-semibold">{{ bid.lion_name or bid.lion }}</div>
                                     </td>
                                     <td class="py-3 font-semibold text-harrowGold" data-bid-amount="{{ bid.amount or 0 }}">

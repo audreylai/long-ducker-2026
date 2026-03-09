@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="space-y-10">
+
+    {# ── Header ── #}
+    <header class="text-center space-y-3">
+        <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Lion Trail</p>
+        <h1 class="text-4xl sm:text-5xl font-serif text-harrowBlue">Scan every lion. Claim the prize.</h1>
+        <p class="text-base text-slate-500 max-w-2xl mx-auto">Walk the Long Ducker route, scan each lion's QR badge, and show your completed passport at the finish tent for a commemorative crest pin.</p>
+    </header>
+
+    {# ── Map + progress ── #}
+    <div class="grid gap-6 lg:grid-cols-2 items-start">
+        <figure class="rounded-3xl border border-white/70 bg-white shadow-sm overflow-hidden h-full p-6">
+			<!-- TODO: Add map image -->
+            <img alt="Long Ducker trail map" class="w-full object-cover" /> 
+        </figure>
+
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-white/70 space-y-6">
+            {# Progress counter #}
+            <div class="flex items-end justify-between gap-4">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Lions collected</p>
+                    <p class="text-5xl font-serif text-harrowBlue leading-none mt-1">
+                        <span data-collected-count>0</span><span class="text-2xl text-slate-300"> / {{ total_stops }}</span>
+                    </p>
+                    <p class="text-sm text-slate-500 mt-1" data-collected-status>Start scanning to track your progress.</p>
+                </div>
+                {% if lions %}
+                <button type="button" data-scan-trigger class="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-harrowBlue text-white text-sm font-semibold shadow hover:bg-harrowBlue/90 active:scale-95 transition">
+                    Scan QR
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h6v6H3V3zm12 0h6v6h-6V3zM3 15h6v6H3v-6zm9-12h.01M12 9h.01M9 12h.01M15 12h.01M12 15h.01M9 18h.01M15 18h.01M18 12h.01M18 18h.01M18 15h.01"></path></svg>
+                </button>
+                {% endif %}
+            </div>
+
+            {# Progress bar #}
+            <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div data-progress-bar class="h-full rounded-full bg-harrowBlue transition-all duration-500" style="width:0%"></div>
+            </div>
+
+            {# Collected chips #}
+            <div data-collected-tags class="flex flex-wrap gap-2 min-h-[2rem]">
+                <span class="text-sm text-slate-400">No scans yet.</span>
+            </div>
+        </div>
+    </div>
+
+    {# ── Lion checklist ── #}
+    {% if lions %}
+    <section class="space-y-4">
+        <div class="flex items-baseline justify-between gap-3">
+            <h2 class="text-2xl font-serif text-harrowBlue">Lion checklist</h2>
+            <p class="text-sm text-slate-400">{{ total_stops }} stops</p>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {% for lion in lions %}
+            <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-white/70 shadow-sm transition" data-lion-card data-lion-id="{{ lion.id }}" data-lion-name="{{ lion.name }}">
+                <span class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 text-xs font-bold transition" data-check-icon>{{ '%02d' % loop.index }}</span>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-harrowBlue truncate">{{ lion.name }}</p>
+                    <p class="text-xs text-slate-400">{{ lion.house or 'House —' }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% else %}
+    <p class="text-sm text-slate-500">Lions are still being prepared — check back soon.</p>
+    {% endif %}
+
+</section>
+
+{# ── Scanner modal ── #}
+<div data-scanner-modal class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="QR scanner">
+    <div data-scanner-overlay class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"></div>
+    <div class="relative z-10 flex flex-col items-center justify-start pt-12 px-4">
+        <div class="w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between px-5 pt-5 pb-3">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.3em] text-harrowBlue/50">Live scanner</p>
+                    <h3 class="text-xl font-serif text-harrowBlue">Point at the lion badge</h3>
+                </div>
+                <button type="button" data-scanner-close class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 text-lg leading-none hover:bg-slate-200 transition" aria-label="Close scanner">&times;</button>
+            </div>
+            <div class="relative bg-black mx-4 rounded-2xl overflow-hidden">
+                <video data-scan-video class="w-full aspect-square object-cover" autoplay muted playsinline></video>
+                {# Crosshair overlay #}
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="w-48 h-48 relative">
+                        <span class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-white rounded-tl-lg"></span>
+                        <span class="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-white rounded-tr-lg"></span>
+                        <span class="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-white rounded-bl-lg"></span>
+                        <span class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-white rounded-br-lg"></span>
+                    </div>
+                </div>
+            </div>
+            <p class="px-5 py-4 text-sm text-center text-slate-500" data-scan-message>Initializing camera…</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{# jsQR — no SRI so the script isn't blocked by a hash mismatch #}
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" crossorigin="anonymous"></script>
+<script>
+(() => {
+    const cards = Array.from(document.querySelectorAll('[data-lion-card]'));
+    if (!cards.length) return;
+
+    // Elements
+    const scanTrigger   = document.querySelector('[data-scan-trigger]');
+    const modal         = document.querySelector('[data-scanner-modal]');
+    const overlay       = document.querySelector('[data-scanner-overlay]');
+    const closeBtn      = document.querySelector('[data-scanner-close]');
+    const videoEl       = document.querySelector('[data-scan-video]');
+    const msgEl         = document.querySelector('[data-scan-message]');
+    const countEl       = document.querySelector('[data-collected-count]');
+    const statusEl      = document.querySelector('[data-collected-status]');
+    const tagsEl        = document.querySelector('[data-collected-tags]');
+    const progressBar   = document.querySelector('[data-progress-bar]');
+
+    const STORAGE_KEY   = 'lion-trail-scans-v2';
+    const total         = cards.length;
+    const cardMap       = new Map(cards.map(c => [c.dataset.lionId, c]));
+
+    // ── Persistence ──────────────────────────────────────────────
+    const load = () => {
+        try {
+            const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            return new Set(Array.isArray(raw) ? raw.filter(id => cardMap.has(id)) : []);
+        } catch { return new Set(); }
+    };
+    const save = (set) => {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...set])); } catch {}
+    };
+
+    const scanned = load();
+
+    // ── Render ───────────────────────────────────────────────────
+    const render = () => {
+        const n = scanned.size;
+
+        // Counter + bar
+        if (countEl) countEl.textContent = n;
+        if (progressBar) progressBar.style.width = total ? `${(n / total) * 100}%` : '0%';
+        if (statusEl) {
+            statusEl.textContent = n === 0
+                ? 'Start scanning to track your progress.'
+                : n === total
+                ? 'All lions collected — head to the finish tent!'
+                : `${total - n} lion${total - n === 1 ? '' : 's'} left to find.`;
+        }
+
+        // Chips
+        if (tagsEl) {
+            tagsEl.innerHTML = '';
+            if (n === 0) {
+                tagsEl.innerHTML = '<span class="text-sm text-slate-400">No scans yet.</span>';
+            } else {
+                scanned.forEach(id => {
+                    const card = cardMap.get(id);
+                    if (!card) return;
+                    const chip = document.createElement('span');
+                    chip.className = 'inline-flex items-center px-3 py-1 rounded-full bg-harrowBlue/10 text-harrowBlue text-xs font-semibold';
+                    chip.textContent = card.dataset.lionName;
+                    tagsEl.appendChild(chip);
+                });
+            }
+        }
+
+        // Checklist cards
+        cards.forEach(card => {
+            const done = scanned.has(card.dataset.lionId);
+            card.classList.toggle('ring-2', done);
+            card.classList.toggle('ring-emerald-300', done);
+            card.classList.toggle('bg-emerald-50/50', done);
+            const icon = card.querySelector('[data-check-icon]');
+            if (icon) {
+                icon.classList.toggle('bg-emerald-500', done);
+                icon.classList.toggle('text-white', done);
+                icon.classList.toggle('bg-slate-100', !done);
+                icon.classList.toggle('text-slate-400', !done);
+                icon.textContent = done ? '✓' : icon.dataset.num || icon.textContent;
+            }
+        });
+    };
+
+    // Store the stop number so we can restore it after un-scan (future use)
+    cards.forEach((card, i) => {
+        const icon = card.querySelector('[data-check-icon]');
+        if (icon) icon.dataset.num = String(i + 1).padStart(2, '0');
+    });
+
+    // ── QR payload parsing ───────────────────────────────────────
+    const extractId = (payload) => {
+        if (!payload) return null;
+        try {
+            const url = new URL(payload);
+            const fromHash = new URLSearchParams(url.hash.slice(1)).get('lion');
+            if (fromHash) return fromHash;
+            const fromSearch = url.searchParams.get('lion');
+            if (fromSearch) return fromSearch;
+        } catch {}
+        const hashIdx = payload.indexOf('#');
+        if (hashIdx >= 0) {
+            const p = new URLSearchParams(payload.slice(hashIdx + 1).replace(/^\?/, ''));
+            const v = p.get('lion');
+            if (v) return v;
+        }
+        if (payload.startsWith('lion=')) return payload.slice(5);
+        return null;
+    };
+
+    // ── Scanner ──────────────────────────────────────────────────
+    const canvas = document.createElement('canvas');
+    const ctx    = canvas.getContext('2d');
+    let stream   = null;
+    let raf      = null;
+    let lastHit  = { id: null, ts: 0 };
+
+    const setMsg = (t) => { if (msgEl) msgEl.textContent = t; };
+
+    const stopStream = () => {
+        if (raf) { cancelAnimationFrame(raf); raf = null; }
+        if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+        if (videoEl) { videoEl.pause(); videoEl.srcObject = null; }
+    };
+
+    const loop = () => {
+        if (!videoEl || videoEl.readyState < 2 || !videoEl.videoWidth) {
+            raf = requestAnimationFrame(loop);
+            return;
+        }
+        canvas.width  = videoEl.videoWidth;
+        canvas.height = videoEl.videoHeight;
+        ctx.drawImage(videoEl, 0, 0);
+        const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        // jsQR is loaded as a regular script and exposed as window.jsQR
+        const code = typeof jsQR === 'function'
+            ? jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' })
+            : null;
+        if (code?.data) {
+            const id  = extractId(code.data.trim());
+            const now = Date.now();
+            if (id && cardMap.has(id) && (id !== lastHit.id || now - lastHit.ts > 2000)) {
+                lastHit = { id, ts: now };
+                scanned.add(id);
+                save(scanned);
+                render();
+                setMsg(`✓ ${cardMap.get(id).dataset.lionName} — keep going!`);
+            }
+        }
+        raf = requestAnimationFrame(loop);
+    };
+
+    const startScanner = async () => {
+        if (!navigator.mediaDevices?.getUserMedia) {
+            setMsg('Camera not supported in this browser.'); return;
+        }
+        if (typeof jsQR !== 'function') {
+            setMsg('Scanner failed to load — please refresh the page.'); return;
+        }
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        } catch {
+            setMsg('Camera access denied. Allow camera permission and try again.'); return;
+        }
+        videoEl.srcObject = stream;
+        videoEl.play();
+        lastHit = { id: null, ts: 0 };
+        setMsg('Centre the QR code in the frame.');
+        raf = requestAnimationFrame(loop);
+    };
+
+    // ── Modal ────────────────────────────────────────────────────
+    const isOpen = () => modal && !modal.classList.contains('hidden');
+
+    const openModal = () => {
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        setMsg('Initializing camera…');
+        startScanner();
+    };
+
+    const closeModal = () => {
+        if (!modal) return;
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+        stopStream();
+        setMsg('Initializing camera…');
+    };
+
+    scanTrigger?.addEventListener('click', openModal);
+    closeBtn?.addEventListener('click', closeModal);
+    overlay?.addEventListener('click', closeModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen()) closeModal(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && isOpen()) closeModal(); });
+
+    render();
+})();
+</script>
+{% endblock %}

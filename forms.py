@@ -7,7 +7,7 @@ from wtforms.validators import DataRequired, Email, Length, NumberRange, Optiona
 
 
 class LionBidForm(FlaskForm):
-    lion_slug = HiddenField(validators=[DataRequired()])
+    lion_id = HiddenField(validators=[DataRequired()])
     amount = DecimalField(
         "Bid amount",
         places=2,

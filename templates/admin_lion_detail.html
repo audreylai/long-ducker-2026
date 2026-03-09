@@ -6,7 +6,7 @@
         <div>
             <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Lion profile</p>
             <h2 class="text-3xl font-serif text-harrowBlue">{{ lion.name }}</h2>
-            <p class="text-sm text-slate-500">House {{ lion.house or '—' }} • slug {{ lion.slug }}</p>
+            <p class="text-sm text-slate-500">House {{ lion.house or '—' }}</p>
         </div>
         <div class="flex flex-wrap gap-3">
             <a href="{{ url_for('admin_edit_lion', lion_id=lion.id) }}" class="px-4 py-2 rounded-2xl bg-harrowBlue text-white text-sm font-semibold">Edit</a>
@@ -89,5 +89,23 @@
             {% endif %}
         </article>
     </div>
+
+    <article class="bg-white/90 rounded-3xl p-6 shadow-sm border border-white/60 grid gap-6 md:grid-cols-[0.8fr_1.2fr]">
+        <figure class="flex items-center justify-center rounded-2xl border border-dashed border-harrowBlue/30 bg-harrowSand/40 p-6">
+            <img src="{{ url_for('admin_lion_qr', lion_id=lion.id) }}" alt="QR code for {{ lion.name }}" class="w-48 h-48 object-contain" loading="lazy" />
+        </figure>
+        <div class="space-y-4">
+            <div>
+                <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">QR code</p>
+                <h3 class="text-2xl font-serif text-harrowBlue">Display ready scan badge</h3>
+                <p class="text-sm text-slate-600">Print this QR and place it next to the lion. Guests scanning it are sent directly to the public bid page for this sculpture.</p>
+            </div>
+            <div class="flex flex-wrap gap-2 text-sm font-semibold">
+                <a href="{{ url_for('admin_lion_qr', lion_id=lion.id) }}" download class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-harrowBlue text-white">Download PNG <span aria-hidden="true">↓</span></a>
+                <a href="{{ url_for('lion_detail', lion_id=lion.id) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-harrowBlue/30 text-harrowBlue">Preview public page <span aria-hidden="true">↗</span></a>
+            </div>
+            <p class="text-xs text-slate-500">Tip: for larger prints, open the QR in a new tab and export it at a higher scale.</p>
+        </div>
+    </article>
 </section>
 {% endblock %}

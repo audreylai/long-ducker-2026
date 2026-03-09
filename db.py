@@ -38,24 +38,23 @@ def get_bids(limit: Optional[int] = None, sort_field: str = "timestamp", directi
     return list(cursor)
 
 
-def get_lion_by_slug(slug: str) -> Optional[dict]:
-    return lions_collection.find_one({"slug": slug})
-
-
 def insert_bid(bid_data: dict) -> str:
     result = bids_collection.insert_one(bid_data)
     return str(result.inserted_id)
 
 
-def update_lion_current_bid(slug: str, amount: int) -> None:
-    lions_collection.update_one({"slug": slug}, {"$set": {"current_bid": amount}})
+def update_lion_current_bid(lion_id: str, amount: int) -> None:
+    try:
+        lion_oid = ObjectId(lion_id)
+    except Exception:
+        return
+    lions_collection.update_one({"_id": lion_oid}, {"$set": {"current_bid": amount}})
 
 
 def load_temp_demo_data() -> None:
 
     lions_payload = [
         {
-            "slug": "solstice-ember",
             "name": "Solstice Ember",
             "house": "Gellhorn",
             "current_bid": 15200,
@@ -68,7 +67,6 @@ def load_temp_demo_data() -> None:
             "updated_at": datetime(2026, 1, 25, 6, 30, tzinfo=timezone.utc),
         },
         {
-            "slug": "prism-runner",
             "name": "Prism Runner",
             "house": "Green",
             "current_bid": 13400,
@@ -81,7 +79,6 @@ def load_temp_demo_data() -> None:
             "updated_at": datetime(2026, 1, 26, 6, 30, tzinfo=timezone.utc),
         },
         {
-            "slug": "harbor-pulse",
             "name": "Harbor Pulse",
             "house": "Red",
             "current_bid": 11900,
@@ -94,7 +91,6 @@ def load_temp_demo_data() -> None:
             "updated_at": datetime(2026, 1, 27, 6, 30, tzinfo=timezone.utc),
         },
         {
-            "slug": "atlas-bloom",
             "name": "Atlas Bloom",
             "house": "Blue",
             "current_bid": 9800,
@@ -107,7 +103,6 @@ def load_temp_demo_data() -> None:
             "updated_at": datetime(2026, 1, 28, 6, 30, tzinfo=timezone.utc),
         },
         {
-            "slug": "midnight-voyager",
             "name": "Midnight Voyager",
             "house": "Gellhorn",
             "current_bid": 8700,
@@ -120,7 +115,6 @@ def load_temp_demo_data() -> None:
             "updated_at": datetime(2026, 1, 29, 6, 30, tzinfo=timezone.utc),
         },
         {
-            "slug": "lumina-trace",
             "name": "Lumina Trace",
             "house": "Green",
             "current_bid": 7600,
@@ -136,49 +130,56 @@ def load_temp_demo_data() -> None:
 
     bids_payload = [
         {
-            "lion": "solstice-ember",
+            "lion": "Solstice Ember",
+            "lion_name": "Solstice Ember",
             "amount": 15200,
             "bidder": "Jamie Lee",
             "contact": {"email": "jamie.lee@example.com", "phone": "+852 5566 7788"},
             "timestamp": datetime(2026, 2, 16, 15, 45, tzinfo=timezone.utc),
         },
         {
-            "lion": "prism-runner",
+            "lion": "Prism Runner",
+            "lion_name": "Prism Runner",
             "amount": 13400,
             "bidder": "Priya Desai",
             "contact": {"email": "priya.desai@example.com", "phone": "+852 6677 8899"},
             "timestamp": datetime(2026, 2, 15, 11, 15, tzinfo=timezone.utc),
         },
         {
-            "lion": "harbor-pulse",
+            "lion": "Harbor Pulse",
+            "lion_name": "Harbor Pulse",
             "amount": 11900,
             "bidder": "Alex Wong",
             "contact": {"email": "alex.wong@example.com", "phone": "+852 9988 7766"},
             "timestamp": datetime(2026, 2, 14, 9, 5, tzinfo=timezone.utc),
         },
         {
-            "lion": "atlas-bloom",
+            "lion": "Atlas Bloom",
+            "lion_name": "Atlas Bloom",
             "amount": 9800,
             "bidder": "Noah Reyes",
             "contact": {"email": "noah.reyes@example.com", "phone": "+852 4455 9911"},
             "timestamp": datetime(2026, 2, 13, 10, 20, tzinfo=timezone.utc),
         },
         {
-            "lion": "midnight-voyager",
+            "lion": "Midnight Voyager",
+            "lion_name": "Midnight Voyager",
             "amount": 8700,
             "bidder": "Maya Patel",
             "contact": {"email": "maya.patel@example.com", "phone": "+852 7788 2211"},
             "timestamp": datetime(2026, 2, 12, 13, 55, tzinfo=timezone.utc),
         },
         {
-            "lion": "lumina-trace",
+            "lion": "Lumina Trace",
+            "lion_name": "Lumina Trace",
             "amount": 7600,
             "bidder": "Ethan Clarke",
             "contact": {"email": "ethan.clarke@example.com", "phone": "+852 8844 6622"},
             "timestamp": datetime(2026, 2, 11, 14, 5, tzinfo=timezone.utc),
         },
         {
-            "lion": "solstice-ember",
+            "lion": "Solstice Ember",
+            "lion_name": "Solstice Ember",
             "amount": 14600,
             "bidder": "Morgan Tse",
             "contact": {"email": "morgan.tse@example.com", "phone": "+852 3322 1144"},
@@ -187,11 +188,21 @@ def load_temp_demo_data() -> None:
     ]
 
     lions_collection.delete_many({})
+    lion_name_to_id: dict[str, str] = {}
     if lions_payload:
-        lions_collection.insert_many(lions_payload)
+        result = lions_collection.insert_many(lions_payload)
+        for payload, inserted_id in zip(lions_payload, result.inserted_ids):
+            lion_name_to_id[payload.get("name")] = str(inserted_id)
 
     bids_collection.delete_many({})
     if bids_payload:
+        for bid in bids_payload:
+            lion_name = bid.get("lion_name") or bid.get("lion")
+            if lion_name:
+                bid["lion"] = lion_name
+                if lion_name in lion_name_to_id:
+                    bid["lion_id"] = lion_name_to_id[lion_name]
+                    bid["lion_name"] = lion_name
         bids_collection.insert_many(bids_payload)
 
 
