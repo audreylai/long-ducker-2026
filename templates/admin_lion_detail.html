@@ -6,7 +6,6 @@
         <div>
             <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Lion profile</p>
             <h2 class="text-3xl font-serif text-harrowBlue">{{ lion.name }}</h2>
-            <p class="text-sm text-slate-500">House {{ lion.house or '—' }}</p>
         </div>
         <div class="flex flex-wrap gap-3">
             <a href="{{ url_for('admin_edit_lion', lion_id=lion.id) }}" class="px-4 py-2 rounded-2xl bg-harrowBlue text-white text-sm font-semibold">Edit</a>
@@ -14,11 +13,13 @@
         </div>
     </div>
 
-    <div class="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+    <div class="grid gap-6 {% if lion.summary %}md:grid-cols-[1.2fr_0.8fr]{% endif %}">
+        {% if lion.summary %}
         <article class="bg-white/90 rounded-3xl p-6 shadow-sm border border-white/60 space-y-4">
             <h3 class="text-xl font-serif text-harrowBlue">Story</h3>
             <p class="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{{ lion.summary }}</p>
         </article>
+        {% endif %}
         <article class="bg-white/90 rounded-3xl p-6 shadow-sm border border-white/60 space-y-4">
             <h3 class="text-xl font-serif text-harrowBlue">Snapshot</h3>
             <dl class="space-y-2 text-sm">

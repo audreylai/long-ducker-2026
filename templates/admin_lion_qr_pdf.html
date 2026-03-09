@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>QR Codes</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Space+Grotesk:wght@400;500;600&display=swap">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        @page { margin: 0; size: A4; }
+
+        body {
+            font-family: "Space Grotesk", Arial, sans-serif;
+            background: white;
+            color: #001E60;
+        }
+
+        .page {
+            width: 210mm;
+            height: 297mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            page-break-after: always;
+            overflow: hidden;
+        }
+        .page:last-child { page-break-after: avoid; }
+
+        /* Navy header strip */
+        .topbar {
+            width: 100%;
+            background: #001E60;
+            padding: 11mm 16mm 10mm;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .topbar-wordmark {
+            font-family: "Playfair Display", Georgia, serif;
+            font-size: 13pt;
+            font-weight: 600;
+            color: white;
+            letter-spacing: 0.04em;
+        }
+        .topbar-label {
+            font-size: 7pt;
+            font-weight: 500;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: #C8A300;
+        }
+
+        /* Gold rule */
+        .gold-rule {
+            width: 100%;
+            height: 3pt;
+            background: #C8A300;
+            flex-shrink: 0;
+        }
+
+        /* QR section — takes all remaining height */
+        .qr-section {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10mm 20mm 6mm;
+        }
+
+        .qr-image {
+            /* Fill most of the available space */
+            width: 155mm;
+            height: 155mm;
+            display: block;
+        }
+
+        /* Name footer */
+        .name-footer {
+            width: 100%;
+            padding: 6mm 16mm 10mm;
+            text-align: center;
+            border-top: 1pt solid rgba(0, 30, 96, 0.15);
+        }
+        .lion-name {
+            font-family: "Playfair Display", Georgia, serif;
+            font-size: 26pt;
+            font-weight: 600;
+            color: #001E60;
+            letter-spacing: 0.02em;
+        }
+        .scan-hint {
+            margin-top: 3pt;
+            font-size: 8pt;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #C8A300;
+        }
+    </style>
+</head>
+<body>
+{% for entry in lions %}
+<div class="page">
+    <div class="topbar">
+        <span class="topbar-wordmark">Long Ducker 2026</span>
+        <span class="topbar-label">QR Badge</span>
+    </div>
+    <div class="gold-rule"></div>
+
+    <div class="qr-section">
+        <img class="qr-image"
+             src="data:image/png;base64,{{ entry.qr_base64 }}"
+             alt="QR code for {{ entry.lion.name }}" />
+    </div>
+
+    <div class="name-footer">
+        <p class="lion-name">{{ entry.lion.name }}</p>
+        <p class="scan-hint">Scan to bid &bull; Long Ducker Auction &bull; www.longducker.com</p>
+    </div>
+</div>
+{% endfor %}
+</body>
+</html>

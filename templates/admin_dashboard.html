@@ -12,6 +12,13 @@
                 Export CSV
                 <span aria-hidden="true">↗</span>
             </a>
+            <a href="{{ url_for('admin_all_qr_pdf') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-harrowBlue/30 text-harrowBlue text-sm font-semibold" target="_blank" rel="noopener">
+                All QR codes PDF
+                <span aria-hidden="true">↗</span>
+            </a>
+            <button type="button" data-clear-db-trigger class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-red-300 text-red-600 text-sm font-semibold hover:bg-red-50 transition">
+                Clear database
+            </button>
             <a href="{{ url_for('admin_logout') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-harrowBlue/30 text-harrowBlue text-sm font-semibold">
                 Sign out
             </a>
@@ -59,7 +66,6 @@
                         <div class="flex items-center gap-4 min-w-0">
                             <img src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=600&q=80' }}" alt="{{ lion.name }}" class="h-16 w-16 rounded-2xl object-cover border border-slate-100" />
                             <div class="min-w-0 space-y-1">
-                                <p class="text-xs uppercase tracking-wide text-slate-500">House {{ lion.house or '—' }}</p>
                                 <p class="text-lg font-semibold text-harrowBlue">{{ lion.name }}</p>
                                 <p class="text-xs text-slate-500">{{ lion.image_count }} asset{{ '' if lion.image_count == 1 else 's' }}</p>
                                 <div class="flex flex-wrap items-center gap-2 text-xs">
@@ -86,9 +92,10 @@
                                 {% endif %}
                             </p>
                         </div>
-                        <div class="flex gap-2 text-xs">
+                        <div class="flex flex-wrap gap-2 text-xs">
                             <a href="{{ url_for('admin_lion_detail', lion_id=lion.id) }}" class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">View</a>
                             <a href="{{ url_for('admin_edit_lion', lion_id=lion.id) }}" class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Edit</a>
+
                         </div>
                     </article>
                     {% endfor %}
@@ -139,6 +146,7 @@
                                     <th class="pb-3">Bidder</th>
                                     <th class="pb-3">Contact</th>
                                     <th class="pb-3">Time</th>
+                                    <th class="pb-3"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100" id="bid-table-body">
@@ -158,6 +166,11 @@
                                     <td class="py-3 text-xs text-slate-500">
                                         {{ bid.timestamp.strftime('%d %b %Y • %H:%M') }}
                                     </td>
+                                    <td class="py-3 text-right">
+                                        <form method="POST" action="{{ url_for('admin_delete_bid', bid_id=bid.id) }}" onsubmit="return confirm('Delete this bid from {{ bid.bidder|e }}?')">
+                                            <button type="submit" class="text-red-400 hover:text-red-600 transition text-xs font-semibold px-2 py-1 rounded hover:bg-red-50">Delete</button>
+                                        </form>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -170,6 +183,26 @@
         </section>
     </div>
 </section>
+{# ── Clear database confirmation modal ── #}
+<div data-clear-db-modal class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-clear-db-overlay></div>
+    <div class="relative z-10 mx-auto mt-32 w-full max-w-sm px-4">
+        <div class="rounded-3xl bg-white shadow-2xl p-6 space-y-4">
+            <div class="space-y-1">
+                <p class="text-xs uppercase tracking-[0.3em] text-red-400">Danger zone</p>
+                <h3 class="text-2xl font-serif text-harrowBlue">Clear all data?</h3>
+            </div>
+            <p class="text-sm text-slate-600">This will permanently delete every lion, bid, and uploaded image. This action cannot be undone.</p>
+            <div class="flex gap-3">
+                <form method="POST" action="{{ url_for('admin_clear_database') }}" class="flex-1">
+                    <button type="submit" class="w-full px-4 py-2 rounded-full bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">Yes, clear everything</button>
+                </form>
+                <button type="button" data-clear-db-cancel class="flex-1 px-4 py-2 rounded-full border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -291,6 +324,18 @@ document.addEventListener('DOMContentLoaded', () => {
     setActive('lions');
     applyBidSort();
     applyBidFilters();
+
+    // Clear database modal
+    const clearModal   = document.querySelector('[data-clear-db-modal]');
+    const clearTrigger = document.querySelector('[data-clear-db-trigger]');
+    const clearOverlay = document.querySelector('[data-clear-db-overlay]');
+    const clearCancel  = document.querySelector('[data-clear-db-cancel]');
+    const openClear  = () => clearModal?.classList.remove('hidden');
+    const closeClear = () => clearModal?.classList.add('hidden');
+    clearTrigger?.addEventListener('click', openClear);
+    clearOverlay?.addEventListener('click', closeClear);
+    clearCancel?.addEventListener('click', closeClear);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeClear(); });
 });
 </script>
 {% endblock %}

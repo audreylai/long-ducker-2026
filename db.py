@@ -297,3 +297,25 @@ def delete_lion_image(lion_id: str, image_id: str) -> bool:
     lion_images_fs.delete(file_obj._id)
     lions_collection.update_one({"_id": lion_oid}, {"$pull": {"image_ids": file_obj._id}})
     return True
+
+
+def delete_bid(bid_id: str) -> bool:
+    try:
+        bid_oid = ObjectId(bid_id)
+    except Exception:
+        return False
+    result = bids_collection.delete_one({"_id": bid_oid})
+    return result.deleted_count > 0
+
+
+def clear_database() -> dict:
+    """Delete all lions, bids, and associated images. Returns counts of deleted documents."""
+    # Remove all GridFS image files
+    deleted_images = 0
+    for grid_out in lion_images_fs.find():
+        lion_images_fs.delete(grid_out._id)
+        deleted_images += 1
+
+    deleted_lions = lions_collection.delete_many({}).deleted_count
+    deleted_bids = bids_collection.delete_many({}).deleted_count
+    return {"lions": deleted_lions, "bids": deleted_bids, "images": deleted_images}

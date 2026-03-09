@@ -1,3 +1,4 @@
+import base64
 import csv
 import io
 import os
@@ -13,6 +14,7 @@ from flask import (
     make_response,
     redirect,
     render_template,
+    request,
     send_file,
     session,
     url_for,
@@ -20,10 +22,13 @@ from flask import (
 from PIL import Image
 import qrcode
 from qrcode.constants import ERROR_CORRECT_Q
+from weasyprint import HTML
 from werkzeug.utils import secure_filename
 
 from db import (
     add_lion_images,
+    clear_database,
+    delete_bid,
     delete_lion_image,
     get_bids,
     get_lion_by_id,
@@ -46,6 +51,7 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key")
 HKT_TZ = timezone(timedelta(hours=8))
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "harrow-lion-2026")
+TRAIL_RESET_PIN = os.environ.get("TRAIL_RESET_PIN", "harrow2026")
 ALLOWED_LION_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
 MAX_LION_IMAGE_DIM = int(os.environ.get("MAX_LION_IMAGE_DIM", "1600"))
 LION_IMAGE_QUALITY = int(os.environ.get("LION_IMAGE_QUALITY", "80"))
@@ -150,7 +156,6 @@ def attach_primary_image_url(lion: Optional[dict]) -> Optional[dict]:
 def lion_payload_from_form(form: AdminLionForm) -> dict:
     payload = {
         "name": (form.name.data or "").strip(),
-        "house": (form.house.data or "").strip() or None,
         "summary": (form.summary.data or "").strip(),
     }
     if form.current_bid.data is not None:
@@ -219,10 +224,27 @@ def compress_lion_image(content: bytes) -> tuple[bytes, str, str]:
     return buffer.getvalue(), "image/webp", "webp"
 
 
+def generate_lion_qr_png(lion_id: str) -> bytes:
+
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=ERROR_CORRECT_Q,
+        box_size=10,
+        border=2,
+    )
+    lion_url = url_for("lion_detail", lion_id=lion_id, _external=True)
+    qr.add_data(f"{lion_url}#lion={lion_id}")
+    qr.make(fit=True)
+    image = qr.make_image(fill_color="#0F172A", back_color="white")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 @app.route("/")
 def home():
     highlight_lions = []
-    for lion in get_lions_by_bid():
+    for lion in get_lions():
         normalized = normalize_lion_time_fields(lion)
         attach_primary_image_url(normalized)
         highlight_lions.append(normalized)
@@ -290,6 +312,7 @@ def admin_dashboard():
     enriched_bids = []
     bids_by_lion = {}
     for bid in bids:
+        bid["id"] = str(bid["_id"])
         lion_ref = bid.get("lion_id") or bid.get("lion")
         lion_match = lion_lookup.get(lion_ref) if lion_ref else None
         if not lion_match and bid.get("lion_name"):
@@ -401,18 +424,7 @@ def admin_lion_qr(lion_id):
     if not lion:
         abort(404)
 
-    qr = qrcode.QRCode(
-        version=None,
-        error_correction=ERROR_CORRECT_Q,
-        box_size=10,
-        border=2,
-    )
-    lion_url = url_for("lion_detail", lion_id=lion_id, _external=True)
-    qr.add_data(f"{lion_url}#lion={lion_id}")
-    qr.make(fit=True)
-    image = qr.make_image(fill_color="#0F172A", back_color="white")
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
+    buffer = io.BytesIO(generate_lion_qr_png(lion_id))
     buffer.seek(0)
 
     response = send_file(
@@ -421,6 +433,58 @@ def admin_lion_qr(lion_id):
         download_name=f"lion-{lion_id}-qr.png",
     )
     response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
+
+
+@app.route("/admin/lions/<lion_id>/qr.pdf")
+@admin_required
+def admin_lion_qr_pdf(lion_id):
+    source_lion = normalize_lion_time_fields(get_lion_by_id(lion_id))
+    lion = serialize_lion_record(source_lion)
+    if not lion:
+        abort(404)
+
+    qr_png = generate_lion_qr_png(lion_id)
+    qr_base64 = base64.b64encode(qr_png).decode("ascii")
+
+    html = render_template(
+        "admin_lion_qr_pdf.html",
+        lions=[{"lion": lion, "qr_base64": qr_base64}],
+        generated_at=datetime.now(HKT_TZ),
+    )
+    pdf_bytes = HTML(string=html, base_url=None).write_pdf()
+
+    response = make_response(pdf_bytes)
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = f'inline; filename="lion-{lion_id}-qr.pdf"'
+    response.headers["Cache-Control"] = "private, max-age=300"
+    return response
+
+
+@app.route("/admin/qr-codes.pdf")
+@admin_required
+def admin_all_qr_pdf():
+    all_lions = get_lions()
+    entries = []
+    for lion in all_lions:
+        lion = serialize_lion_record(normalize_lion_time_fields(lion))
+        if not lion:
+            continue
+        lion_id = lion["id"]
+        qr_png = generate_lion_qr_png(lion_id)
+        entries.append({"lion": lion, "qr_base64": base64.b64encode(qr_png).decode("ascii")})
+
+    html = render_template(
+        "admin_lion_qr_pdf.html",
+        lions=entries,
+        generated_at=datetime.now(HKT_TZ),
+    )
+    pdf_bytes = HTML(string=html, base_url=None).write_pdf()
+
+    response = make_response(pdf_bytes)
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = 'inline; filename="all-qr-codes.pdf"'
+    response.headers["Cache-Control"] = "private, no-store"
     return response
 
 
@@ -436,7 +500,6 @@ def admin_edit_lion(lion_id):
     form = AdminLionForm()
     if not form.is_submitted():
         form.name.data = lion.get("name")
-        form.house.data = lion.get("house")
         form.summary.data = lion.get("summary")
         form.current_bid.data = lion.get("current_bid")
         starts = lion.get("bidding_starts_at")
@@ -499,6 +562,17 @@ def admin_delete_lion_image(lion_id, image_id):
     return redirect(url_for("admin_edit_lion", lion_id=lion_id))
 
 
+@app.route("/admin/clear-database", methods=["POST"])
+@admin_required
+def admin_clear_database():
+    counts = clear_database()
+    flash(
+        f"Database cleared — {counts['lions']} lion(s), {counts['bids']} bid(s), and {counts['images']} image(s) deleted.",
+        "warning",
+    )
+    return redirect(url_for("admin_dashboard"))
+
+
 @app.route("/admin/export/bids.csv")
 @admin_required
 def admin_export_bids_csv():
@@ -532,6 +606,29 @@ def admin_export_bids_csv():
     response.headers["Content-Disposition"] = "attachment; filename=bids.csv"
     response.headers["Content-Type"] = "text/csv"
     return response
+
+
+@app.route("/admin/bids/<bid_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_bid(bid_id):
+    if delete_bid(bid_id):
+        flash("Bid deleted.", "info")
+    else:
+        flash("Unable to delete the selected bid.", "warning")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/trail/reset", methods=["GET", "POST"])
+def trail_reset():
+    success = False
+    error = None
+    if request.method == "POST":
+        pin = request.form.get("pin", "")
+        if pin == TRAIL_RESET_PIN:
+            success = True
+        else:
+            error = "Incorrect PIN. Please try again."
+    return render_template("trail_reset.html", success=success, error=error)
 
 
 @app.route("/lions/<lion_id>", methods=["GET", "POST"])
@@ -623,5 +720,6 @@ def inject_global_context():
         "admin_logged_in": admin_is_authenticated(),
     }
 
+# Use for development
 # if __name__ == "__main__":
 #     app.run(debug=True)

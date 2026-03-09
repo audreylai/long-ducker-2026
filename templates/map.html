@@ -41,8 +41,19 @@
             </div>
 
             {# Collected chips #}
-            <div data-collected-tags class="flex flex-wrap gap-2 min-h-[2rem]">
+            <div data-collected-tags class="flex flex-wrap gap-2 min-h-8">
                 <span class="text-sm text-slate-400">No scans yet.</span>
+            </div>
+
+            {# Completion banner — shown only when all lions scanned #}
+            <div data-completion-banner class="hidden rounded-2xl bg-emerald-50 border border-emerald-200 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="space-y-0.5">
+                    <p class="text-sm font-semibold text-emerald-800">All lions collected!</p>
+                    <p class="text-xs text-emerald-700">Head to the finish tent to claim your commemorative crest pin.</p>
+                </div>
+                <a href="{{ url_for('trail_reset') }}" class="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-600 text-white text-xs font-semibold shadow hover:bg-emerald-700 transition">
+                    Claim prize &rarr;
+                </a>
             </div>
         </div>
     </div>
@@ -60,7 +71,6 @@
                 <span class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 text-xs font-bold transition" data-check-icon>{{ '%02d' % loop.index }}</span>
                 <div class="min-w-0">
                     <p class="text-sm font-semibold text-harrowBlue truncate">{{ lion.name }}</p>
-                    <p class="text-xs text-slate-400">{{ lion.house or 'House —' }}</p>
                 </div>
             </div>
             {% endfor %}
@@ -154,6 +164,10 @@
                 ? 'All lions collected — head to the finish tent!'
                 : `${total - n} lion${total - n === 1 ? '' : 's'} left to find.`;
         }
+
+        // Completion banner
+        const banner = document.querySelector('[data-completion-banner]');
+        if (banner) banner.classList.toggle('hidden', n < total);
 
         // Chips
         if (tagsEl) {

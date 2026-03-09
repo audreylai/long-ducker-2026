@@ -8,7 +8,6 @@
     {% set ends_at_hkt = lion.bidding_ends_at_hkt %}
     <div class="space-y-6">
         <div>
-            <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">House {{ lion.house }}</p>
 			<div class="flex flex-wrap items-center gap-3">
                 <h2 class="text-4xl font-serif text-harrowBlue">{{ lion.name }}</h2>
                 {% if admin_logged_in and lion.id %}
@@ -17,8 +16,17 @@
             </div>
             <p class="mt-3 text-slate-600">{{ lion.summary }}</p>
         </div>
-        <div class="aspect-4/3 w-full overflow-hidden rounded-3xl bg-slate-200">
-            <img src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80' }}" alt="{{ lion.name }} sculpture" class="h-full w-full object-cover" />
+        <div class="aspect-4/3 w-full overflow-hidden rounded-3xl bg-slate-200 cursor-zoom-in" data-lightbox-trigger>
+            <img src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80' }}" alt="{{ lion.name }} sculpture" class="h-full w-full object-cover transition hover:scale-105 duration-500" data-lightbox-src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80' }}" />
+        </div>
+
+        {# Image lightbox modal #}
+        <div data-lightbox-modal class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="Image preview">
+            <div data-lightbox-overlay class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+            <div class="relative z-10 flex h-full w-full items-center justify-center p-4">
+                <button type="button" data-lightbox-close class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white text-2xl hover:bg-white/20 transition" aria-label="Close">&times;</button>
+                <img data-lightbox-img src="" alt="{{ lion.name }}" class="max-h-[90vh] max-w-[90vw] rounded-2xl shadow-2xl object-contain" />
+            </div>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="bg-white rounded-3xl p-6 shadow-sm">
@@ -188,6 +196,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateCountdowns();
     setInterval(updateCountdowns, 1000);
+
+    // Lightbox
+    const trigger = document.querySelector('[data-lightbox-trigger]');
+    const lightboxModal = document.querySelector('[data-lightbox-modal]');
+    const lightboxOverlay = document.querySelector('[data-lightbox-overlay]');
+    const lightboxClose = document.querySelector('[data-lightbox-close]');
+    const lightboxImg = document.querySelector('[data-lightbox-img]');
+
+    const openLightbox = () => {
+        const src = trigger?.querySelector('[data-lightbox-src]')?.dataset.lightboxSrc;
+        if (!src || !lightboxModal || !lightboxImg) return;
+        lightboxImg.src = src;
+        lightboxModal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+    };
+    const closeLightbox = () => {
+        lightboxModal?.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    };
+
+    trigger?.addEventListener('click', openLightbox);
+    lightboxClose?.addEventListener('click', closeLightbox);
+    lightboxOverlay?.addEventListener('click', closeLightbox);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 });
 </script>
 {% endblock %}
