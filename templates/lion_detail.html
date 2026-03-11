@@ -1,13 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="grid gap-10 lg:grid-cols-2">
-    {% set starts_at = lion.bidding_starts_at %}
-    {% set ends_at = lion.bidding_ends_at %}
-    {% set starts_at_hkt = lion.bidding_starts_at_hkt %}
-    {% set ends_at_hkt = lion.bidding_ends_at_hkt %}
-    <div class="space-y-6">
-        <div>
+<section class=""> 
+	<div>
 			<div class="flex flex-wrap items-center gap-3">
                 <h2 class="text-4xl font-serif text-harrowBlue">{{ lion.name }}</h2>
                 {% if admin_logged_in and lion.id %}
@@ -16,148 +11,145 @@
             </div>
             <p class="mt-3 text-slate-600">{{ lion.summary }}</p>
         </div>
-        <div class="aspect-4/3 w-full overflow-hidden rounded-3xl bg-slate-200 cursor-zoom-in" data-lightbox-trigger>
-            <img src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80' }}" alt="{{ lion.name }} sculpture" class="h-full w-full object-cover transition hover:scale-105 duration-500" data-lightbox-src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80' }}" />
-        </div>
-
-        {# Image lightbox modal #}
-        <div data-lightbox-modal class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="Image preview">
-            <div data-lightbox-overlay class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
-            <div class="relative z-10 flex h-full w-full items-center justify-center p-4">
-                <button type="button" data-lightbox-close class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white text-2xl hover:bg-white/20 transition" aria-label="Close">&times;</button>
-                <img data-lightbox-img src="" alt="{{ lion.name }}" class="max-h-[90vh] max-w-[90vw] rounded-2xl shadow-2xl object-contain" />
-            </div>
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2">
-            <div class="bg-white rounded-3xl p-6 shadow-sm">
-                <p class="text-xs uppercase tracking-wide text-slate-500">Current bid</p>
-                <p class="mt-2 text-4xl font-serif text-harrowGold">${{ '{:,.0f}'.format(lion.current_bid or 0) }}</p>
-            </div>
-            <div class="bg-white rounded-3xl p-6 shadow-sm">
-                {% if bidding_open and ends_at %}
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Closes in</p>
-                            <p class="mt-2 text-3xl font-mono text-harrowBlue" data-countdown data-target="{{ ends_at.isoformat() }}" data-countdown-value>--:--:--</p>
-                        </div>
-                    </div>
-                {% elif starts_at and current_time < starts_at %}
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Opens in</p>
-                            <p class="mt-2 text-3xl font-mono text-harrowBlue" data-countdown data-target="{{ starts_at.isoformat() }}" data-countdown-value>--:--:--</p>
-                        </div>
-                    </div>
-                {% else %}
-                    <div>
-                        <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Countdown</p>
-                        <p class="mt-2 text-sm text-slate-600">This lion has closed for bidding.</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-        <div class="bg-white rounded-3xl p-6 shadow-sm">
-            <h3 class="text-lg font-semibold text-harrowBlue">Recent bids</h3>
-            <ul class="mt-4 space-y-3 text-sm">
-                {% if bids %}
-                    {% for bid in bids[:4] %}
-                    {% set bidder_name = bid.bidder or 'Friend' %}
-                    {% set masked_name = bidder_name[0]|upper ~ '****' %}
-                    <li class="flex items-center justify-between">
-                        <span class="text-slate-500">{{ masked_name }}</span>
-                        <span class="text-harrowGold font-semibold">${{ '{:,.0f}'.format(bid.amount) }}</span>
-                    </li>
-                    {% endfor %}
-                {% else %}
-                    <li class="text-slate-500">No bids yet. Be the first to support this lion.</li>
-                {% endif %}
-            </ul>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-3xl p-6 shadow-sm border border-white/60 h-fit">
-        <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Bid online</p>
-        <h3 class="text-2xl font-serif text-harrowBlue">Place a bid for {{ lion.name }}</h3>
-        <p class="mt-2 text-sm text-slate-600">Complete the form below and the Long Ducker team will confirm your pledge via email or phone.</p>
-
-        {% set form_disabled = not bidding_open %}
-
-        <div class="mt-6 flex flex-wrap items-center gap-3 text-sm">
-            {% if bidding_open %}
-                <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 font-semibold text-emerald-700">
-                    <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Bidding live
-                </span>
-                {% if ends_at_hkt %}
-                    <span class="text-slate-600">Closes {{ ends_at_hkt.strftime('%d %b %Y • %H:%M') }} HKT</span>
-                {% endif %}
-            {% elif starts_at and current_time < starts_at %}
-                <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 font-semibold text-amber-700">
-                    <span class="h-2 w-2 rounded-full bg-amber-500"></span>
-                    Opens soon
-                </span>
-                {% if starts_at_hkt %}
-                    <span class="text-slate-600">Opens {{ starts_at_hkt.strftime('%d %b %Y • %H:%M') }} HKT</span>
-                {% endif %}
-            {% else %}
-                <span class="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 font-semibold text-red-700">
-                    <span class="h-2 w-2 rounded-full bg-red-500"></span>
-                    Bidding closed
-                </span>
-                {% if ends_at_hkt %}
-                    <span class="text-slate-600">Closed on {{ ends_at_hkt.strftime('%d %b %Y • %H:%M') }} HKT</span>
-                {% endif %}
-            {% endif %}
-        </div>
-
-        <form method="post" class="mt-6 flex flex-col gap-4" novalidate>
-            {{ form.hidden_tag() }}
-
-            <label class="space-y-2 text-sm font-medium text-harrowBlue">
-                Bid amount (HKD)
-                {{ form.amount(class="mt-1 w-full rounded-2xl border-slate-200 focus:border-harrowBlue focus:ring-harrowBlue", disabled=form_disabled) }}
-                {% if form.amount.errors %}
-                    <span class="text-xs text-red-600">{{ form.amount.errors[0] }}</span>
-                {% endif %}
-            </label>
-
-            <label class="space-y-2 text-sm font-medium text-harrowBlue">
-                Full name
-                {{ form.name(class="mt-1 w-full rounded-2xl border-slate-200 focus:border-harrowBlue focus:ring-harrowBlue", disabled=form_disabled) }}
-                {% if form.name.errors %}
-                    <span class="text-xs text-red-600">{{ form.name.errors[0] }}</span>
-                {% endif %}
-            </label>
-
-            <label class="space-y-2 text-sm font-medium text-harrowBlue">
-                Email
-                {{ form.email(class="mt-1 w-full rounded-2xl border-slate-200 focus:border-harrowBlue focus:ring-harrowBlue", disabled=form_disabled) }}
-                {% if form.email.errors %}
-                    <span class="text-xs text-red-600">{{ form.email.errors[0] }}</span>
-                {% endif %}
-            </label>
-
-            <label class="space-y-2 text-sm font-medium text-harrowBlue">
-                Mobile
-                {{ form.phone(class="mt-1 w-full rounded-2xl border-slate-200 focus:border-harrowBlue focus:ring-harrowBlue", disabled=form_disabled) }}
-                {% if form.phone.errors %}
-                    <span class="text-xs text-red-600">{{ form.phone.errors[0] }}</span>
-                {% endif %}
-            </label>
-
-            <label class="flex items-start gap-3 rounded-2xl px-4 py-3 text-sm text-slate-600">
-                {{ form.agree(class="mt-1 rounded border-slate-300 text-harrowBlue focus:ring-harrowBlue", disabled=form_disabled) }}
-                <span>I agree to the terms and conditions. If my bid wins, I commit to completing the purchase.</span>
-            </label>
-            {% if form.agree.errors %}
-                <span class="text-xs text-red-600 font-medium">{{ form.agree.errors[0] }}</span>
-            {% endif %}
-
-            <div class="flex gap-3">
-                <button type="submit" class="px-6 py-3 rounded-full bg-harrowBlue text-white font-semibold {% if form_disabled %}opacity-50 cursor-not-allowed{% endif %}" {% if form_disabled %}disabled{% endif %}>Submit bid request</button>
-                <a href="{{ url_for('lions_catalog') }}" class="px-6 py-3 rounded-full border border-harrowBlue/20 text-harrowBlue font-semibold">Back to catalogue</a>
-            </div>
-        </form>
+    <div class="grid gap-8 lg:grid-cols-2">
+		{% set starts_at = lion.bidding_starts_at %}
+		    {% set ends_at = lion.bidding_ends_at %}
+		    {% set ends_at_hkt = lion.bidding_ends_at_hkt %}
+	    <div class="space-y-6">
+	    
+	        <div class="aspect-4/5 w-full overflow-hidden rounded-3xl bg-slate-200 cursor-zoom-in" data-lightbox-trigger>
+	            <img src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80' }}" alt="{{ lion.name }} sculpture" class="h-full w-full object-cover transition hover:scale-105 duration-500" data-lightbox-src="{{ lion.image_url or 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80' }}" />
+	        </div>
+	
+	        {# Image lightbox modal #}
+	        <div data-lightbox-modal class="fixed inset-0 mb-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="Image preview">
+	            <div data-lightbox-overlay class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+	            <div class="relative z-10 flex h-full w-full items-center justify-center p-4">
+	                <button type="button" data-lightbox-close class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white text-2xl hover:bg-white/20 transition" aria-label="Close">&times;</button>
+	                <img data-lightbox-img src="" alt="{{ lion.name }}" class="max-h-[90vh] max-w-[90vw] rounded-2xl shadow-2xl object-contain" />
+	            </div>
+	        </div>
+	        <div class="grid gap-4 sm:grid-cols-2">
+	            <div class="bg-white rounded-3xl p-6 shadow-sm">
+	                <p class="text-xs uppercase tracking-wide text-slate-500">Current bid</p>
+	                <p class="mt-2 text-4xl font-serif text-harrowGold">${{ '{:,.0f}'.format(lion.current_bid or 0) }}</p>
+	            </div>
+	            <div class="bg-white rounded-3xl p-6 shadow-sm">
+	                {% if bidding_open and ends_at %}
+	                    <p class="text-xs uppercase tracking-wide text-slate-500">Closes in</p>
+	                    <p class="mt-2 text-xl font-mono font-semibold text-harrowBlue" data-countdown data-target="{{ ends_at.isoformat() }}" data-countdown-value>--:--:--</p>
+	                    {% if ends_at_hkt %}
+	                        <p class="mt-1 text-xs text-slate-400">{{ ends_at_hkt.strftime('%d %b %Y • %H:%M') }} HKT</p>
+	                    {% endif %}
+	                {% elif starts_at and current_time < starts_at %}
+	                    <p class="text-xs uppercase tracking-wide text-slate-500">Opens in</p>
+	                    <p class="mt-2 text-xl font-mono font-semibold text-amber-600" data-countdown data-target="{{ starts_at.isoformat() }}" data-countdown-value>--:--:--</p>
+	                {% else %}
+	                    <p class="text-xs uppercase tracking-wide text-slate-500">Countdown</p>
+	                    <p class="mt-2 text-sm text-slate-400">Bidding has closed.</p>
+	                {% endif %}
+	            </div>
+	        </div>
+	        <div class="bg-white rounded-3xl p-6 shadow-sm">
+	            <h3 class="text-lg font-semibold text-harrowBlue">Recent bids</h3>
+	            <ul class="mt-4 space-y-3 text-sm">
+	                {% if bids %}
+	                    {% for bid in bids[:4] %}
+	                    {% set bidder_name = bid.bidder or 'Friend' %}
+	                    {% set masked_name = bidder_name[0]|upper ~ '****' %}
+	                    <li class="flex items-center justify-between">
+	                        <span class="text-slate-500">{{ masked_name }}</span>
+	                        <span class="text-harrowGold font-semibold">${{ '{:,.0f}'.format(bid.amount) }}</span>
+	                    </li>
+	                    {% endfor %}
+	                {% else %}
+	                    <li class="text-slate-500">No bids yet. Be the first to support this lion.</li>
+	                {% endif %}
+	            </ul>
+	        </div>
+	    </div>
+	
+	    <div class="bg-white rounded-3xl p-6 shadow-sm border border-white/60 h-fit">
+	        <p class="text-xs uppercase tracking-[0.4em] text-harrowBlue/60">Bid online</p>
+	        <h3 class="text-2xl font-serif text-harrowBlue">Place a bid for {{ lion.name }}</h3>
+	        <p class="mt-2 text-sm text-slate-600">Complete the form below and the Long Ducker team will confirm your pledge via email or phone.</p>
+	
+	        {% set form_disabled = not bidding_open %}
+	
+	        <div class="mt-6 flex flex-wrap items-center gap-3 text-sm">
+	            {% if bidding_open %}
+	                <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 font-semibold text-emerald-700">
+	                    <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+	                    Bidding live
+	                </span>
+	                {% if ends_at_hkt %}
+	                    <span class="text-slate-600">Closes {{ ends_at_hkt.strftime('%d %b %Y • %H:%M') }} HKT</span>
+	                {% endif %}
+	            {% elif starts_at and current_time < starts_at %}
+	                <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 font-semibold text-amber-700">
+	                    <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+	                    Opens soon
+	                </span>
+	            {% else %}
+	                <span class="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 font-semibold text-red-700">
+	                    <span class="h-2 w-2 rounded-full bg-red-500"></span>
+	                    Bidding closed
+	                </span>
+	                {% if ends_at_hkt %}
+	                    <span class="text-slate-600">Closed on {{ ends_at_hkt.strftime('%d %b %Y • %H:%M') }} HKT</span>
+	                {% endif %}
+	            {% endif %}
+	        </div>
+	
+	        <form method="post" class="mt-6 flex flex-col gap-4" novalidate>
+	            {{ form.hidden_tag() }}
+	
+	            <label class="space-y-2 text-sm font-medium text-harrowBlue">
+	                Bid amount (HKD)
+	                {{ form.amount(class="mt-1 w-full rounded-2xl border-slate-200 focus:border-harrowBlue focus:ring-harrowBlue", disabled=form_disabled) }}
+	                {% if form.amount.errors %}
+	                    <span class="text-xs text-red-600">{{ form.amount.errors[0] }}</span>
+	                {% endif %}
+	            </label>
+	
+	            <label class="space-y-2 text-sm font-medium text-harrowBlue">
+	                Full name
+	                {{ form.name(class="mt-1 w-full rounded-2xl border-slate-200 focus:border-harrowBlue focus:ring-harrowBlue", disabled=form_disabled) }}
+	                {% if form.name.errors %}
+	                    <span class="text-xs text-red-600">{{ form.name.errors[0] }}</span>
+	                {% endif %}
+	            </label>
+	
+	            <label class="space-y-2 text-sm font-medium text-harrowBlue">
+	                Email
+	                {{ form.email(class="mt-1 w-full rounded-2xl border-slate-200 focus:border-harrowBlue focus:ring-harrowBlue", disabled=form_disabled) }}
+	                {% if form.email.errors %}
+	                    <span class="text-xs text-red-600">{{ form.email.errors[0] }}</span>
+	                {% endif %}
+	            </label>
+	
+	            <label class="space-y-2 text-sm font-medium text-harrowBlue">
+	                Mobile
+	                {{ form.phone(class="mt-1 w-full rounded-2xl border-slate-200 focus:border-harrowBlue focus:ring-harrowBlue", disabled=form_disabled) }}
+	                {% if form.phone.errors %}
+	                    <span class="text-xs text-red-600">{{ form.phone.errors[0] }}</span>
+	                {% endif %}
+	            </label>
+	
+	            <label class="flex items-start gap-3 rounded-2xl px-4 py-3 text-sm text-slate-600">
+	                {{ form.agree(class="mt-1 rounded border-slate-300 text-harrowBlue focus:ring-harrowBlue", disabled=form_disabled) }}
+	                <span>I agree to the terms and conditions. If my bid wins, I commit to completing the purchase.</span>
+	            </label>
+	            {% if form.agree.errors %}
+	                <span class="text-xs text-red-600 font-medium">{{ form.agree.errors[0] }}</span>
+	            {% endif %}
+	
+	            <div class="flex gap-3">
+	                <button type="submit" class="px-6 py-3 rounded-full bg-harrowBlue text-white font-semibold {% if form_disabled %}opacity-50 cursor-not-allowed{% endif %}" {% if form_disabled %}disabled{% endif %}>Submit bid request</button>
+	                <a href="{{ url_for('lions_catalog') }}" class="px-6 py-3 rounded-full border border-harrowBlue/20 text-harrowBlue font-semibold">Back to catalogue</a>
+	            </div>
+	        </form>
+	    </div>
     </div>
 </section>
 {% endblock %}
@@ -187,10 +179,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 valueEl.textContent = '00:00:00';
                 return;
             }
-            const hours = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
-            const minutes = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
-            const seconds = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
-            valueEl.textContent = `${hours}:${minutes}:${seconds}`;
+            const totalSecs = Math.floor(diff / 1000);
+            const days = Math.floor(totalSecs / 86400);
+            const hours = String(Math.floor((totalSecs % 86400) / 3600)).padStart(2, '0');
+            const minutes = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+            const seconds = String(totalSecs % 60).padStart(2, '0');
+            valueEl.textContent = days > 0
+                ? `${days}d ${hours}:${minutes}:${seconds}`
+                : `${hours}:${minutes}:${seconds}`;
         });
     };
 

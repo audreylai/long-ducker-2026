@@ -32,6 +32,6 @@ class AdminLionForm(FlaskForm):
     name = StringField("Lion name", validators=[DataRequired(), Length(max=120)])
     summary = TextAreaField("Summary", validators=[Optional(), Length(max=1000)])
     current_bid = IntegerField("Current bid", validators=[Optional(), NumberRange(min=0)])
-    bidding_starts_at = DateTimeLocalField("Bidding starts", format="%Y-%m-%dT%H:%M", validators=[Optional()])
+    bidding_starts_at = DateTimeLocalField("Bidding opens", format="%Y-%m-%dT%H:%M", validators=[Optional()])
     bidding_ends_at = DateTimeLocalField("Bidding ends", format="%Y-%m-%dT%H:%M", validators=[Optional()])
     images = MultipleFileField("Lion images", validators=[Optional()])

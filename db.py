@@ -219,6 +219,25 @@ def insert_lion(lion_data: dict) -> str:
     return str(result.inserted_id)
 
 
+def delete_lion(lion_id: str) -> bool:
+    try:
+        lion_oid = ObjectId(lion_id)
+    except Exception:
+        return False
+    # Delete all bids for this lion
+    bids_collection.delete_many({"lion_id": lion_id})
+    # Delete all images from GridFS
+    lion = lions_collection.find_one({"_id": lion_oid})
+    if lion:
+        for image_id in lion.get("image_ids", []):
+            try:
+                lion_images_fs.delete(image_id)
+            except Exception:
+                pass
+    result = lions_collection.delete_one({"_id": lion_oid})
+    return result.deleted_count > 0
+
+
 def update_lion(lion_id: str, lion_data: dict) -> bool:
     try:
         oid = ObjectId(lion_id)
@@ -297,6 +316,22 @@ def delete_lion_image(lion_id: str, image_id: str) -> bool:
     lion_images_fs.delete(file_obj._id)
     lions_collection.update_one({"_id": lion_oid}, {"$pull": {"image_ids": file_obj._id}})
     return True
+
+
+def get_bid_by_id(bid_id: str) -> Optional[dict]:
+    try:
+        bid_oid = ObjectId(bid_id)
+    except Exception:
+        return None
+    return bids_collection.find_one({"_id": bid_oid})
+
+
+def get_max_bid_for_lion(lion_id: str) -> int:
+    result = bids_collection.find_one(
+        {"lion_id": lion_id},
+        sort=[("amount", DESCENDING)],
+    )
+    return int(result.get("amount", 0)) if result else 0
 
 
 def delete_bid(bid_id: str) -> bool:

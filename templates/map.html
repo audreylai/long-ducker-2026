@@ -11,11 +11,35 @@
     </header>
 
     {# ── Map + progress ── #}
-    <div class="grid gap-6 lg:grid-cols-2 items-start">
-        <figure class="rounded-3xl border border-white/70 bg-white shadow-sm overflow-hidden h-full p-6">
-			<!-- TODO: Add map image -->
-            <img alt="Long Ducker trail map" class="w-full object-cover" /> 
+    <div class="grid gap-6 items-start">
+        <figure class="rounded-3xl border border-white/70 bg-white shadow-sm overflow-hidden h-full relative group">
+            <img alt="Long Ducker trail map" class="w-full object-cover cursor-zoom-in" src="{{url_for('static', filename='images/map.jpeg')}}" id="trail-map-img"/>
+            <div class="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button type="button" id="map-enlarge-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 shadow text-xs font-semibold text-harrowBlue border border-white/60 hover:bg-white transition" aria-label="Enlarge map">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0zm-2 2l4 4"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 11h6M11 8v6"/></svg>
+                    Enlarge
+                </button>
+                <a href="{{url_for('static', filename='images/map.jpeg')}}" download="long-ducker-trail-map.jpeg" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 shadow text-xs font-semibold text-harrowBlue border border-white/60 hover:bg-white transition" aria-label="Save map">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+                    Save
+                </a>
+            </div>
         </figure>
+
+        {# Map lightbox #}
+        <div id="map-lightbox" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="Map preview">
+            <div id="map-lightbox-overlay" class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+            <div class="relative z-10 flex flex-col h-full w-full items-center justify-center p-4 gap-3">
+                <div class="flex items-center gap-3">
+                    <a href="{{url_for('static', filename='images/map.jpeg')}}" download="long-ducker-trail-map.jpeg" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/10 text-white text-xs font-semibold hover:bg-white/20 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+                        Save image
+                    </a>
+                    <button type="button" id="map-lightbox-close" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10 text-white text-xl hover:bg-white/20 transition" aria-label="Close">&times;</button>
+                </div>
+                <img src="{{url_for('static', filename='images/map.jpeg')}}" alt="Long Ducker trail map" class="max-h-[85vh] max-w-full rounded-2xl shadow-2xl object-contain"/>
+            </div>
+        </div>
 
         <div class="bg-white rounded-3xl p-6 shadow-sm border border-white/70 space-y-6">
             {# Progress counter #}
@@ -40,13 +64,9 @@
                 <div data-progress-bar class="h-full rounded-full bg-harrowBlue transition-all duration-500" style="width:0%"></div>
             </div>
 
-            {# Collected chips #}
-            <div data-collected-tags class="flex flex-wrap gap-2 min-h-8">
-                <span class="text-sm text-slate-400">No scans yet.</span>
-            </div>
 
             {# Completion banner — shown only when all lions scanned #}
-            <div data-completion-banner class="hidden rounded-2xl bg-emerald-50 border border-emerald-200 px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div data-completion-banner class="hidden rounded-2xl bg-emerald-50 border border-emerald-200 px-5 py-4 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="space-y-0.5">
                     <p class="text-sm font-semibold text-emerald-800">All lions collected!</p>
                     <p class="text-xs text-emerald-700">Head to the finish tent to claim your commemorative crest pin.</p>
@@ -130,7 +150,6 @@
     const msgEl         = document.querySelector('[data-scan-message]');
     const countEl       = document.querySelector('[data-collected-count]');
     const statusEl      = document.querySelector('[data-collected-status]');
-    const tagsEl        = document.querySelector('[data-collected-tags]');
     const progressBar   = document.querySelector('[data-progress-bar]');
 
     const STORAGE_KEY   = 'lion-trail-scans-v2';
@@ -168,23 +187,6 @@
         // Completion banner
         const banner = document.querySelector('[data-completion-banner]');
         if (banner) banner.classList.toggle('hidden', n < total);
-
-        // Chips
-        if (tagsEl) {
-            tagsEl.innerHTML = '';
-            if (n === 0) {
-                tagsEl.innerHTML = '<span class="text-sm text-slate-400">No scans yet.</span>';
-            } else {
-                scanned.forEach(id => {
-                    const card = cardMap.get(id);
-                    if (!card) return;
-                    const chip = document.createElement('span');
-                    chip.className = 'inline-flex items-center px-3 py-1 rounded-full bg-harrowBlue/10 text-harrowBlue text-xs font-semibold';
-                    chip.textContent = card.dataset.lionName;
-                    tagsEl.appendChild(chip);
-                });
-            }
-        }
 
         // Checklist cards
         cards.forEach(card => {
@@ -316,6 +318,22 @@
     document.addEventListener('visibilitychange', () => { if (document.hidden && isOpen()) closeModal(); });
 
     render();
+})();
+
+// Map lightbox
+(() => {
+    const lightbox = document.getElementById('map-lightbox');
+    const overlay  = document.getElementById('map-lightbox-overlay');
+    const closeBtn = document.getElementById('map-lightbox-close');
+    const mapImg   = document.getElementById('trail-map-img');
+    const enlargeBtn = document.getElementById('map-enlarge-btn');
+    const open  = () => { lightbox?.classList.remove('hidden'); document.body.classList.add('overflow-hidden'); };
+    const close = () => { lightbox?.classList.add('hidden'); document.body.classList.remove('overflow-hidden'); };
+    enlargeBtn?.addEventListener('click', open);
+    mapImg?.addEventListener('click', open);
+    closeBtn?.addEventListener('click', close);
+    overlay?.addEventListener('click', close);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 })();
 </script>
 {% endblock %}

@@ -24,18 +24,22 @@ import qrcode
 from qrcode.constants import ERROR_CORRECT_Q
 from weasyprint import HTML
 from werkzeug.utils import secure_filename
+from flask_wtf.csrf import generate_csrf
 
 from db import (
     add_lion_images,
     clear_database,
     delete_bid,
+    delete_lion,
     delete_lion_image,
+    get_bid_by_id,
     get_bids,
     get_lion_by_id,
     get_lion_image_file,
     get_lion_images,
     get_lions,
     get_lions_by_bid,
+    get_max_bid_for_lion,
     insert_bid,
     insert_lion,
     update_lion,
@@ -153,7 +157,7 @@ def attach_primary_image_url(lion: Optional[dict]) -> Optional[dict]:
     return lion
 
 
-def lion_payload_from_form(form: AdminLionForm) -> dict:
+def lion_payload_from_form(form: AdminLionForm, existing_lion: Optional[dict] = None) -> dict:
     payload = {
         "name": (form.name.data or "").strip(),
         "summary": (form.summary.data or "").strip(),
@@ -165,8 +169,10 @@ def lion_payload_from_form(form: AdminLionForm) -> dict:
     if form.bidding_starts_at.data:
         local_start = form.bidding_starts_at.data.replace(tzinfo=HKT_TZ)
         payload["bidding_starts_at"] = local_start.astimezone(timezone.utc)
+    elif existing_lion:
+        payload["bidding_starts_at"] = ensure_utc_datetime(existing_lion.get("bidding_starts_at")) or datetime.now(timezone.utc)
     else:
-        payload["bidding_starts_at"] = None
+        payload["bidding_starts_at"] = datetime.now(timezone.utc)
     if form.bidding_ends_at.data:
         local_end = form.bidding_ends_at.data.replace(tzinfo=HKT_TZ)
         payload["bidding_ends_at"] = local_end.astimezone(timezone.utc)
@@ -513,7 +519,7 @@ def admin_edit_lion(lion_id):
         uploads = extract_lion_uploads(form)
         if form.images.errors:
             return render_template("admin_lion_form.html", form=form, lion=lion, mode="edit")
-        lion_document = lion_payload_from_form(form)
+        lion_document = lion_payload_from_form(form, existing_lion=source_lion)
         lion_document["updated_at"] = datetime.now(timezone.utc)
         updated = update_lion(lion_id, lion_document)
         if uploads:
@@ -560,6 +566,16 @@ def admin_delete_lion_image(lion_id, image_id):
     else:
         flash("Unable to remove the selected image.", "warning")
     return redirect(url_for("admin_edit_lion", lion_id=lion_id))
+
+
+@app.route("/admin/lions/<lion_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_lion(lion_id):
+    if delete_lion(lion_id):
+        flash("Lion deleted.", "info")
+    else:
+        flash("Unable to delete the selected lion.", "warning")
+    return redirect(url_for("admin_dashboard"))
 
 
 @app.route("/admin/clear-database", methods=["POST"])
@@ -611,7 +627,11 @@ def admin_export_bids_csv():
 @app.route("/admin/bids/<bid_id>/delete", methods=["POST"])
 @admin_required
 def admin_delete_bid(bid_id):
+    bid = get_bid_by_id(bid_id)
+    lion_id = bid.get("lion_id") if bid else None
     if delete_bid(bid_id):
+        if lion_id:
+            update_lion_current_bid(lion_id, get_max_bid_for_lion(lion_id))
         flash("Bid deleted.", "info")
     else:
         flash("Unable to delete the selected bid.", "warning")
@@ -718,6 +738,7 @@ def inject_global_context():
         "current_year": now.year,
         "current_time": now,
         "admin_logged_in": admin_is_authenticated(),
+        "csrf_token": generate_csrf,
     }
 
 # Use for development

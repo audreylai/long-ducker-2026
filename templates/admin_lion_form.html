@@ -30,8 +30,9 @@
         <div class="grid gap-5 sm:grid-cols-2">
             <div>
                 <label class="block text-sm font-semibold text-harrowBlue">{{ form.bidding_starts_at.label }}
-                    {{ form.bidding_starts_at(class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none") }}
+                    {{ form.bidding_starts_at(id="bidding-starts-at", class="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-2.5 focus:border-harrowBlue focus:outline-none") }}
                 </label>
+                <p class="mt-1 text-xs text-slate-500">Defaults to now if left unchanged.</p>
                 {% for error in form.bidding_starts_at.errors %}
                     <p class="mt-1 text-xs text-red-600">{{ error }}</p>
                 {% endfor %}
@@ -116,6 +117,17 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // Autofill bidding_starts_at with current local time if empty (new lion form)
+    const startsAtInput = document.getElementById('bidding-starts-at');
+    if (startsAtInput && !startsAtInput.value) {
+        const now = new Date();
+        now.setSeconds(0, 0);
+        // Format as YYYY-MM-DDTHH:MM for datetime-local input
+        const pad = (n) => String(n).padStart(2, '0');
+        const local = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        startsAtInput.value = local;
+    }
+
     const input = document.getElementById('lion-images');
     const zone = document.getElementById('lion-dropzone');
     const list = document.getElementById('lion-dropzone-list');

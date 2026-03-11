@@ -76,8 +76,8 @@
                                     {% else %}
                                         <span class="inline-flex items-center rounded-full px-2 py-0.5 font-semibold bg-slate-100 text-slate-500">Closed</span>
                                     {% endif %}
-                                    {% if lion.bidding_starts_at_hkt and lion.bidding_ends_at_hkt %}
-                                        <span class="text-slate-500">{{ lion.bidding_starts_at_hkt.strftime('%d %b %H:%M') }} – {{ lion.bidding_ends_at_hkt.strftime('%d %b %H:%M') }}</span>
+                                    {% if lion.bidding_ends_at_hkt %}
+                                        <span class="text-slate-500">Closes {{ lion.bidding_ends_at_hkt.strftime('%d %b %H:%M') }}</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -95,7 +95,10 @@
                         <div class="flex flex-wrap gap-2 text-xs">
                             <a href="{{ url_for('admin_lion_detail', lion_id=lion.id) }}" class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">View</a>
                             <a href="{{ url_for('admin_edit_lion', lion_id=lion.id) }}" class="px-3 py-1 rounded-full border border-harrowBlue/20 text-harrowBlue">Edit</a>
-
+                            <form method="POST" action="{{ url_for('admin_delete_lion', lion_id=lion.id) }}" onsubmit="return confirm('Delete {{ lion.name|e }} and all its bids and images?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="px-3 py-1 rounded-full border border-red-200 text-red-600">Delete</button>
+                            </form>
                         </div>
                     </article>
                     {% endfor %}
