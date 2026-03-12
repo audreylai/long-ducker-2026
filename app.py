@@ -713,8 +713,8 @@ def lion_detail(lion_id):
         current_time=now,
     )
 
-@app.route("/map")
-def map_view():
+@app.route("/trail")
+def trail_view():
     trail_lions = []
     for record in get_lions():
         serialized = serialize_lion_record(record)
@@ -726,7 +726,7 @@ def map_view():
     trail_lions.sort(key=lambda lion: lion.get("name") or "")
     print(trail_lions)
     return render_template(
-        "map.html",
+        "trail.html",
         lions=trail_lions,
         total_stops=len(trail_lions),
     )

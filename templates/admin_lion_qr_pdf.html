@@ -96,6 +96,15 @@
             text-transform: uppercase;
             color: #C8A300;
         }
+        .trail-hint {
+            margin-top: 5pt;
+            font-size: 8.5pt;
+            letter-spacing: 0.04em;
+            color: #001E60;
+        }
+        .trail-hint strong {
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -115,7 +124,9 @@
 
     <div class="name-footer">
         <p class="lion-name">{{ entry.lion.name }}</p>
-        <p class="scan-hint">Scan to bid &bull; Long Ducker Auction &bull; www.longducker.com</p>
+        <p class="scan-hint">Long Ducker Auction 2026</p>
+        <p class="trail-hint">Scan this QR code at <strong>longducker.com/trail</strong> to begin the trail.</p>
+        <p class="trail-hint">View all lions on auction at <strong>longducker.com</strong></p>
     </div>
 </div>
 {% endfor %}
